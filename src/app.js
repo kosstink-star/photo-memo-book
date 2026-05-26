@@ -116,7 +116,7 @@ async function handleFileSelect(file) {
     return;
   }
 
-  Promise.all([extractExif(processFile), createThumbnail(processFile)])
+  Promise.all([extractExif(file), createThumbnail(processFile)])
     .then(([exifData, thumbnail]) => {
       currentExifData = exifData;
       currentThumbnail = thumbnail;

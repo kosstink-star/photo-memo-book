@@ -2,70 +2,39 @@
  * exifParser.js - EXIF 데이터 추출 모듈
  * 서버 업로드 없이 브라우저 단에서 즉시 EXIF(촬영 일시, GPS 좌표) 추출
  */
-import EXIF from 'exif-js';
-
-/**
- * GPS 도분초(DMS)를 십진수(Decimal Degrees)로 변환합니다.
- * @param {number[]} dms - [도, 분, 초]
- * @param {string} ref - 방향 ('N', 'S', 'E', 'W')
- * @returns {number|null}
- */
-function dmsToDecimal(dms, ref) {
-  if (!dms || dms.length < 3) return null;
-  const degrees = dms[0] + dms[1] / 60 + dms[2] / 3600;
-  return (ref === 'S' || ref === 'W') ? -degrees : degrees;
-}
-
-/**
- * EXIF 날짜 문자열("YYYY:MM:DD HH:MM:SS")을 ISO 문자열로 변환합니다.
- * @param {string} exifDate
- * @returns {string|null}
- */
-function parseExifDate(exifDate) {
-  if (!exifDate) return null;
-  // "2023:10:24 14:30:22" → "2023-10-24T14:30:22"
-  const cleaned = exifDate.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3').replace(' ', 'T');
-  const date = new Date(cleaned);
-  return isNaN(date.getTime()) ? null : date.toISOString();
-}
+import exifr from 'exifr';
 
 /**
  * 사진 파일(File 객체)에서 EXIF 메타데이터를 추출합니다.
  * @param {File} file - 이미지 파일
  * @returns {Promise<{ date: string|null, lat: number|null, lng: number|null, allTags: Object }>}
  */
-export function extractExif(file) {
-  return new Promise((resolve) => {
-    // 1. 만약 EXIF.getData가 실패하거나 무한 로딩될 경우를 대비한 타임아웃
-    const timeout = setTimeout(() => {
-      resolve({ date: null, lat: null, lng: null, allTags: {} });
-    }, 3000);
-
-    try {
-      // EXIF.js는 File 객체를 직접 읽을 수 있습니다. Image 태그 변환 과정을 생략하여 속도와 안정성을 높입니다.
-      EXIF.getData(file, function () {
-        clearTimeout(timeout);
-        const allTags = EXIF.getAllTags(this) || {};
-
-        const dateTimeOriginal = EXIF.getTag(this, 'DateTimeOriginal');
-        const date = parseExifDate(dateTimeOriginal);
-
-        const gpsLat = EXIF.getTag(this, 'GPSLatitude');
-        const gpsLatRef = EXIF.getTag(this, 'GPSLatitudeRef');
-        const gpsLng = EXIF.getTag(this, 'GPSLongitude');
-        const gpsLngRef = EXIF.getTag(this, 'GPSLongitudeRef');
-
-        const lat = dmsToDecimal(gpsLat, gpsLatRef);
-        const lng = dmsToDecimal(gpsLng, gpsLngRef);
-
-        resolve({ date, lat, lng, allTags });
-      });
-    } catch (err) {
-      clearTimeout(timeout);
-      console.warn('EXIF parsing error:', err);
-      resolve({ date: null, lat: null, lng: null, allTags: {} });
+export async function extractExif(file) {
+  try {
+    // exifr은 HEIC, JPEG, PNG 등의 메타데이터를 네이티브로 파싱하며,
+    // 날짜와 위/경도(소수점)를 자동으로 변환해서 줍니다.
+    const tags = await exifr.parse(file, true);
+    
+    if (!tags) {
+      return { date: null, lat: null, lng: null, allTags: {} };
     }
-  });
+
+    let date = null;
+    if (tags.DateTimeOriginal) {
+      date = new Date(tags.DateTimeOriginal).toISOString();
+    } else if (tags.CreateDate) {
+      date = new Date(tags.CreateDate).toISOString();
+    }
+
+    // exifr은 latitude, longitude 속성으로 소수점 좌표를 바로 제공합니다
+    const lat = tags.latitude != null ? tags.latitude : null;
+    const lng = tags.longitude != null ? tags.longitude : null;
+
+    return { date, lat, lng, allTags: tags };
+  } catch (err) {
+    console.warn('EXIF parsing error (exifr):', err);
+    return { date: null, lat: null, lng: null, allTags: {} };
+  }
 }
 
 /**
