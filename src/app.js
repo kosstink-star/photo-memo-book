@@ -19,7 +19,13 @@ const exifPanel = document.getElementById('exif-panel');
 const memoSection = document.getElementById('memo-section');
 const memoTextarea = document.getElementById('memo-textarea');
 const btnSave = document.getElementById('btn-save');
-const btnCancel = document.getElementById('btn-cancel');
+// 검색 요소
+const btnSearch = document.getElementById('btn-search');
+const btnSearchClose = document.getElementById('btn-search-close');
+const searchContainer = document.getElementById('search-container');
+const searchInput = document.getElementById('search-input');
+
+// 기타 UI
 const timelineGrid = document.getElementById('timeline-grid');
 const timelineEmptyState = document.getElementById('timeline-empty');
 const photoCountBadge = document.getElementById('photo-count');
@@ -40,6 +46,22 @@ const exifAddress = document.getElementById('exif-address');
 const exifCoord = document.getElementById('exif-coord');
 const exifPreview = document.getElementById('exif-preview');
 
+// 설정 및 백업 요소
+const btnSettings = document.getElementById('btn-settings');
+const settingsModal = document.getElementById('settings-modal');
+const settingsModalClose = document.getElementById('settings-modal-close');
+const btnExport = document.getElementById('btn-export');
+const btnImport = document.getElementById('btn-import');
+const importInput = document.getElementById('import-input');
+
+// 모달 요소
+const photoModal = document.getElementById('photo-modal');
+const photoModalClose = document.getElementById('photo-modal-close');
+const photoModalImg = document.getElementById('photo-modal-img');
+const photoModalDate = document.getElementById('photo-modal-date');
+const photoModalLocation = document.getElementById('photo-modal-location');
+const photoModalMemo = document.getElementById('photo-modal-memo');
+
 // ──────────────────────────────────────
 // State
 // ──────────────────────────────────────
@@ -49,6 +71,7 @@ let currentThumbnail = null;
 let currentFileBase64 = null;
 let currentFileName = '';
 let mapInitialized = false;
+let searchQuery = '';
 
 // ──────────────────────────────────────
 // Utilities
@@ -316,14 +339,35 @@ async function handleDelete(id) {
 // Render Timeline
 // ──────────────────────────────────────
 async function renderTimeline() {
-  const photos = await getAllPhotos();
+  let photos = await getAllPhotos();
+  
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    photos = photos.filter(p => {
+      const matchMemo = p.memo && p.memo.toLowerCase().includes(q);
+      const matchAddr = p.address && p.address.toLowerCase().includes(q);
+      const matchDate = p.date && p.date.includes(q);
+      return matchMemo || matchAddr || matchDate;
+    });
+  }
+
   const count = photos.length;
 
-  photoCountBadge.textContent = count > 0 ? `${count}개의 추억` : '최신순';
+  if (searchQuery) {
+    photoCountBadge.textContent = count > 0 ? `검색 결과 ${count}건` : '검색 결과 없음';
+  } else {
+    photoCountBadge.textContent = count > 0 ? `${count}개의 추억` : '최신순';
+  }
 
   if (count === 0) {
     timelineGrid.innerHTML = '';
     timelineEmptyState.classList.remove('hidden');
+    // 검색 중이면 안내문구 변경
+    if (searchQuery) {
+      timelineEmptyState.querySelector('p').innerHTML = '검색 결과가 없습니다.<br/>다른 키워드로 검색해보세요.';
+    } else {
+      timelineEmptyState.querySelector('p').innerHTML = '아직 기록된 추억이 없습니다.<br/>사진을 업로드하여 첫 추억을 남겨보세요!';
+    }
     return;
   }
 
@@ -365,10 +409,19 @@ async function renderTimeline() {
     })
     .join('');
 
+  // 모달 열기 이벤트
+  timelineGrid.querySelectorAll('.memo-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const id = card.dataset.id;
+      const photo = photos.find(p => p.id === id);
+      if (photo) openPhotoModal(photo);
+    });
+  });
+
   // 삭제 버튼 이벤트
   timelineGrid.querySelectorAll('[data-delete-id]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
-      e.stopPropagation();
+      e.stopPropagation(); // 모달 열림 방지
       handleDelete(btn.dataset.deleteId);
     });
   });
@@ -407,6 +460,116 @@ function switchView(view) {
 // Event Listeners
 // ──────────────────────────────────────
 function initEventListeners() {
+  // 검색 토글
+  if (btnSearch) {
+    btnSearch.addEventListener('click', () => {
+      searchContainer.classList.toggle('hidden');
+      if (!searchContainer.classList.contains('hidden')) {
+        searchInput.focus();
+      }
+    });
+  }
+  if (btnSearchClose) {
+    btnSearchClose.addEventListener('click', () => {
+      searchContainer.classList.add('hidden');
+      searchInput.value = '';
+      searchQuery = '';
+      renderTimeline();
+    });
+  }
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim();
+      renderTimeline();
+    });
+  }
+
+  // 모달 닫기 공통 처리
+  [photoModalClose, settingsModalClose].forEach(btn => {
+    if(!btn) return;
+    btn.addEventListener('click', (e) => {
+      const modal = e.target.closest('.photo-modal');
+      if (modal) {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+    });
+  });
+
+  document.querySelectorAll('.photo-modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+    });
+  });
+
+  // 설정 모달 열기
+  if (btnSettings) {
+    btnSettings.addEventListener('click', () => {
+      settingsModal.classList.add('active');
+      settingsModal.setAttribute('aria-hidden', 'false');
+    });
+  }
+
+  // 데이터 백업 (내보내기)
+  if (btnExport) {
+    btnExport.addEventListener('click', async () => {
+      try {
+        const photos = await getAllPhotos();
+        if (photos.length === 0) {
+          showToast('백업할 데이터가 없습니다.');
+          return;
+        }
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(photos));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "photo_memo_backup.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+        showToast('백업 파일이 다운로드되었습니다.');
+      } catch (err) {
+        console.error('Backup failed', err);
+        showToast('백업 중 오류가 발생했습니다.');
+      }
+    });
+  }
+
+  // 데이터 복구 (불러오기)
+  if (btnImport && importInput) {
+    btnImport.addEventListener('click', () => importInput.click());
+    importInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const importedPhotos = JSON.parse(event.target.result);
+          if (!Array.isArray(importedPhotos)) throw new Error("Invalid format");
+          let importedCount = 0;
+          for (const photo of importedPhotos) {
+            // 중복 방지를 위해 간단히 저장. 실 서비스에선 ID 체크 필요
+            await savePhoto(photo);
+            importedCount++;
+          }
+          showToast(`${importedCount}개의 추억이 복구되었습니다!`);
+          settingsModal.classList.remove('active');
+          await renderTimeline();
+          if (currentView === 'map') {
+            getAllPhotos().then(renderMarkers);
+          }
+        } catch (err) {
+          console.error('Import failed', err);
+          showToast('잘못된 백업 파일입니다.');
+        }
+        importInput.value = '';
+      };
+      reader.readAsText(file);
+    });
+  }
+
   // 업로드 영역 클릭
   uploadArea.addEventListener('click', () => fileInput.click());
 
@@ -439,7 +602,7 @@ function initEventListeners() {
   navTimeline.addEventListener('click', () => switchView('timeline'));
   navMap.addEventListener('click', () => switchView('map'));
   navAdd.addEventListener('click', () => {
-    switchView('timeline');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     fileInput.click();
   });
 
@@ -447,6 +610,32 @@ function initEventListeners() {
   document.getElementById('btn-search')?.addEventListener('click', () => {
     showToast('검색 기능은 곧 추가됩니다!');
   });
+}
+
+// ──────────────────────────────────────
+// Modal Helper
+// ──────────────────────────────────────
+function openPhotoModal(photo) {
+  // 고화질 Base64 원본을 바로 띄웁니다!
+  photoModalImg.src = photo.imageDataUrl || photo.thumbnailDataUrl; 
+  photoModalImg.alt = photo.fileName || '사진';
+  
+  photoModalDate.textContent = formatDate(photo.date) || '날짜 미상';
+  
+  if (photo.address) {
+    photoModalLocation.textContent = photo.address;
+    photoModalLocation.classList.remove('hidden');
+  } else if (photo.lat != null) {
+    photoModalLocation.textContent = `${photo.lat.toFixed(4)}, ${photo.lng.toFixed(4)}`;
+    photoModalLocation.classList.remove('hidden');
+  } else {
+    photoModalLocation.classList.add('hidden');
+  }
+
+  photoModalMemo.textContent = photo.memo || '메모가 없습니다.';
+  
+  photoModal.classList.add('active');
+  photoModal.setAttribute('aria-hidden', 'false');
 }
 
 // ──────────────────────────────────────

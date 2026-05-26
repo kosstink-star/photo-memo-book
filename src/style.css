@@ -9,6 +9,8 @@
 
 /* --- Leaflet CSS --- */
 @import 'leaflet/dist/leaflet.css';
+@import 'leaflet.markercluster/dist/MarkerCluster.css';
+@import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 /* --- CSS Custom Properties (Design Tokens) --- */
 :root {
@@ -153,6 +155,58 @@ body {
 }
 .icon-button:active {
   transform: scale(0.92);
+}
+
+/* --- Search Container --- */
+.search-container {
+  position: sticky;
+  top: 64px;
+  z-index: 39;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-surface-variant);
+  transition: max-height 0.3s, opacity 0.3s, padding 0.3s;
+  max-height: 80px;
+  opacity: 1;
+  overflow: hidden;
+}
+.search-container.hidden {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+  pointer-events: none;
+}
+.search-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px var(--space-margin-mobile);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+@media (min-width: 768px) {
+  .search-inner {
+    padding-left: var(--space-margin-desktop);
+    padding-right: var(--space-margin-desktop);
+  }
+}
+.search-inner .search-icon {
+  color: var(--color-on-surface-variant);
+}
+.search-inner input {
+  flex: 1;
+  border: none;
+  background: var(--color-surface-container-low);
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 15px;
+  outline: none;
+  transition: background 0.2s;
+}
+.search-inner input:focus {
+  background: var(--color-surface-container);
 }
 
 /* --- Main Content --- */
@@ -423,25 +477,28 @@ body {
   border-radius: var(--radius-full);
 }
 
-/* --- Timeline Grid --- */
+/* --- Timeline Grid (Masonry) --- */
 .timeline-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-gutter);
+  column-count: 1;
+  column-gap: var(--space-gutter);
 }
 @media (min-width: 640px) {
   .timeline-grid {
-    grid-template-columns: repeat(2, 1fr);
+    column-count: 2;
   }
 }
 @media (min-width: 1024px) {
   .timeline-grid {
-    grid-template-columns: repeat(3, 1fr);
+    column-count: 3;
   }
 }
 
 /* --- Memo Card --- */
 .memo-card {
+  break-inside: avoid;
+  margin-bottom: var(--space-gutter);
+  display: inline-block;
+  width: 100%;
   background: var(--color-surface-container-lowest);
   border-radius: var(--radius-xl);
   box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
@@ -449,6 +506,7 @@ body {
   overflow: hidden;
   transition: box-shadow 0.3s, transform 0.3s;
   position: relative;
+  cursor: pointer;
 }
 .memo-card:hover {
   box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.08);
@@ -456,7 +514,8 @@ body {
 }
 .memo-card-image {
   width: 100%;
-  height: 200px;
+  height: auto;
+  min-height: 150px;
   object-fit: cover;
   display: block;
   background: var(--color-surface-variant);
@@ -553,12 +612,17 @@ body {
   max-width: 280px;
 }
 
-/* --- Map Container --- */
+/* --- View Containers with Smooth Transitions --- */
 .view-container {
   display: none;
+  animation: viewFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .view-container.active {
   display: block;
+}
+@keyframes viewFadeIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 #map-container {
   width: 100%;
@@ -686,3 +750,92 @@ body {
 
 /* --- Hidden utility --- */
 .hidden { display: none !important; }
+
+/* --- Full-Screen Photo Modal --- */
+.photo-modal {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.photo-modal.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.photo-modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  width: 44px; height: 44px;
+  color: #fff;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10000;
+  transition: background 0.2s, transform 0.2s;
+}
+.photo-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+.photo-modal-close:active {
+  transform: scale(0.9);
+}
+.photo-modal-content {
+  max-width: 90%;
+  max-height: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+}
+.photo-modal.active .photo-modal-content {
+  transform: scale(1) translateY(0);
+}
+.photo-modal-content img {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  background: rgba(255,255,255,0.05);
+}
+.photo-modal-info {
+  margin-top: 20px;
+  color: #fff;
+  text-align: center;
+  width: 100%;
+  max-width: 600px;
+  padding-bottom: 20px;
+}
+.photo-modal-meta {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.modal-tag {
+  background: rgba(255,255,255,0.15);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+}
+.photo-modal-memo {
+  font-size: 16px;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.9);
+}

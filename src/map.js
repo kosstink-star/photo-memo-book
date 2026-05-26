@@ -3,6 +3,7 @@
  * OpenStreetMap을 활용한 촬영 위치 시각화
  */
 import L from 'leaflet';
+import 'leaflet.markercluster';
 
 let mapInstance = null;
 let markersLayer = null;
@@ -27,7 +28,13 @@ export function initMap(containerId) {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(mapInstance);
 
-  markersLayer = L.layerGroup().addTo(mapInstance);
+  markersLayer = L.markerClusterGroup({
+    chunkedLoading: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    maxClusterRadius: 50,
+  });
+  mapInstance.addLayer(markersLayer);
 
   return mapInstance;
 }

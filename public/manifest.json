@@ -1,0 +1,17 @@
+{
+  "name": "추억 기록 - Photo Memo Book",
+  "short_name": "추억 기록",
+  "description": "사진의 위치와 메모를 안전하게 내 기기에 기록하는 비밀 일기장",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fdf9f4",
+  "theme_color": "#964735",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📸</text></svg>",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

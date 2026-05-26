@@ -20,6 +20,9 @@
   <!-- 보안: Referrer 정보 최소화 -->
   <meta name="referrer" content="no-referrer" />
   <title>추억 기록 - Local EXIF Photo Memo</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📸</text></svg>" />
 </head>
 <body>
@@ -36,6 +39,17 @@
       </button>
     </div>
   </header>
+
+  <!-- ════════════════ Search Container ════════════════ -->
+  <div class="search-container hidden" id="search-container">
+    <div class="search-inner">
+      <span class="material-symbols-outlined search-icon">search</span>
+      <input type="text" id="search-input" placeholder="메모, 주소, 날짜 검색..." />
+      <button class="icon-button" id="btn-search-close" aria-label="검색 닫기">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  </div>
 
   <!-- ════════════════ Main Content ════════════════ -->
   <main class="main-content">
@@ -160,7 +174,55 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
+  <!-- ════════════════ Settings Modal (Backup/Restore) ════════════════ -->
+  <div class="photo-modal" id="settings-modal" aria-hidden="true">
+    <button class="photo-modal-close" id="settings-modal-close" aria-label="닫기">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+    <div class="photo-modal-content" style="background:var(--color-surface); padding:var(--space-xl); border-radius:var(--radius-xl); max-width:400px; text-align:center;">
+      <h2 style="font-family:var(--font-display); color:var(--color-on-surface); margin-bottom:var(--space-md);">데이터 관리</h2>
+      <p style="font-size:14px; color:var(--color-on-surface-variant); margin-bottom:var(--space-xl);">브라우저 캐시를 삭제하면 데이터가 날아갈 수 있습니다. 소중한 추억을 정기적으로 백업하세요!</p>
+      
+      <button class="btn btn-primary" id="btn-export" style="width:100%; justify-content:center; margin-bottom:var(--space-md); font-size:16px; padding:14px;">
+        <span class="material-symbols-outlined">download</span> 전체 추억 백업하기
+      </button>
+      
+      <div style="position:relative;">
+        <input type="file" id="import-input" accept=".json" class="hidden" />
+        <button class="btn btn-secondary" id="btn-import" style="width:100%; justify-content:center; font-size:16px; padding:14px;">
+          <span class="material-symbols-outlined">upload</span> 백업 파일 불러오기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ Full-Screen Photo Viewer Modal ════════════════ -->
+  <div class="photo-modal" id="photo-modal" aria-hidden="true">
+    <button class="photo-modal-close" id="photo-modal-close" aria-label="닫기">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+    <div class="photo-modal-content">
+      <img id="photo-modal-img" src="" alt="확대된 사진" />
+      <div class="photo-modal-info">
+        <div class="photo-modal-meta">
+          <span id="photo-modal-date" class="modal-tag"></span>
+          <span id="photo-modal-location" class="modal-tag"></span>
+        </div>
+        <p id="photo-modal-memo" class="photo-modal-memo"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- App Entry -->
   <script type="module" src="/src/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
