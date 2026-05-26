@@ -36,8 +36,8 @@ const navAdd = document.getElementById('nav-add');
 
 // EXIF 표시 요소
 const exifDate = document.getElementById('exif-date');
-const exifLat = document.getElementById('exif-lat');
-const exifLng = document.getElementById('exif-lng');
+const exifAddress = document.getElementById('exif-address');
+const exifCoord = document.getElementById('exif-coord');
 const exifPreview = document.getElementById('exif-preview');
 
 // ──────────────────────────────────────
@@ -79,6 +79,18 @@ function formatCoord(value, isLat) {
   const sec = ((minRaw - min) * 60).toFixed(1);
   const dir = isLat ? (value >= 0 ? 'N' : 'S') : (value >= 0 ? 'E' : 'W');
   return `${deg}° ${min}' ${sec}" ${dir}`;
+}
+
+async function reverseGeocode(lat, lng) {
+  if (lat == null || lng == null) return null;
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=ko`);
+    const data = await res.json();
+    return data.display_name || null;
+  } catch (err) {
+    console.error('Geocoding error:', err);
+    return null;
+  }
 }
 
 // ──────────────────────────────────────
@@ -134,15 +146,26 @@ async function handleFileSelect(file) {
       exifDate.textContent = formatDate(exifData.date) || '정보 없음';
       exifDate.classList.toggle('no-data', !exifData.date);
 
-      exifLat.textContent = exifData.lat != null
-        ? `${formatCoord(exifData.lat, true)}  (${exifData.lat.toFixed(6)})`
-        : '정보 없음';
-      exifLat.classList.toggle('no-data', exifData.lat == null);
-
-      exifLng.textContent = exifData.lng != null
-        ? `${formatCoord(exifData.lng, false)}  (${exifData.lng.toFixed(6)})`
-        : '정보 없음';
-      exifLng.classList.toggle('no-data', exifData.lng == null);
+      if (exifData.lat != null && exifData.lng != null) {
+        exifCoord.textContent = `${exifData.lat.toFixed(5)}, ${exifData.lng.toFixed(5)}`;
+        exifCoord.classList.remove('no-data');
+        exifAddress.textContent = '주소를 불러오는 중...';
+        exifAddress.classList.remove('no-data');
+        
+        reverseGeocode(exifData.lat, exifData.lng).then(address => {
+          if (address) {
+            exifData.address = address;
+            exifAddress.textContent = address;
+          } else {
+            exifAddress.textContent = '주소를 찾을 수 없음';
+          }
+        });
+      } else {
+        exifCoord.textContent = '정보 없음';
+        exifCoord.classList.add('no-data');
+        exifAddress.textContent = '위치 정보 없음';
+        exifAddress.classList.add('no-data');
+      }
 
       // 패널 표시
       exifPanel.classList.add('active');
@@ -164,19 +187,24 @@ async function handleFileSelect(file) {
 async function handleSave() {
   if (!currentFile || !currentThumbnail) return;
 
-  const photoData = {
-    id: generateId(),
-    imageBlob: currentFile,
-    thumbnailDataUrl: currentThumbnail,
-    date: currentExifData?.date || null,
-    lat: currentExifData?.lat || null,
-    lng: currentExifData?.lng || null,
-    memo: memoTextarea.value.trim(),
-    fileName: currentFile.name,
-    createdAt: Date.now(),
-  };
-
   try {
+    // iOS Safari 등에서 File 객체를 IndexedDB에 직접 저장할 때 발생하는 DataCloneError 방지
+    const arrayBuffer = await currentFile.arrayBuffer();
+    const safeBlob = new Blob([arrayBuffer], { type: currentFile.type });
+
+    const photoData = {
+      id: generateId(),
+      imageBlob: safeBlob,
+      thumbnailDataUrl: currentThumbnail,
+      date: currentExifData?.date || null,
+      lat: currentExifData?.lat || null,
+      lng: currentExifData?.lng || null,
+      address: currentExifData?.address || null,
+      memo: memoTextarea.value.trim(),
+      fileName: currentFile.name,
+      createdAt: Date.now(),
+    };
+
     await savePhoto(photoData);
     showToast('추억이 안전하게 저장되었습니다 ✨');
     resetUploadState();
@@ -236,9 +264,13 @@ async function renderTimeline() {
   timelineGrid.innerHTML = photos
     .map((photo, idx) => {
       const dateStr = formatDate(photo.date);
-      const locationStr = photo.lat != null && photo.lng != null
-        ? `${photo.lat.toFixed(4)}, ${photo.lng.toFixed(4)}`
-        : null;
+      let locationStr = null;
+      if (photo.address) {
+        // 주소가 길면 앞부분 3~4어절만 잘라서 간결하게 표시
+        locationStr = photo.address.split(' ').slice(0, 4).join(' ');
+      } else if (photo.lat != null && photo.lng != null) {
+        locationStr = `${photo.lat.toFixed(4)}, ${photo.lng.toFixed(4)}`;
+      }
 
       return `
         <article class="memo-card fade-in" style="animation-delay:${idx * 0.06}s" data-id="${photo.id}">
