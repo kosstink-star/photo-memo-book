@@ -46,7 +46,8 @@ const exifPreview = document.getElementById('exif-preview');
 let currentView = 'timeline';
 let currentExifData = null;
 let currentThumbnail = null;
-let currentFile = null;
+let currentFileBase64 = null;
+let currentFileName = '';
 let mapInitialized = false;
 
 // ──────────────────────────────────────
@@ -62,16 +63,12 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove('show'), 2600);
 }
 
-function fileToSafeBlob(file) {
+function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const blob = new Blob([e.target.result], { type: file.type });
-      blob.name = file.name;
-      resolve(blob);
-    };
+    reader.onload = (e) => resolve(e.target.result);
     reader.onerror = (err) => reject(err);
-    reader.readAsArrayBuffer(file);
+    reader.readAsDataURL(file);
   });
 }
 
@@ -159,13 +156,15 @@ async function handleFileSelect(file) {
     .then(async ([exifData, thumbnail]) => {
       currentExifData = exifData;
       currentThumbnail = thumbnail;
+      currentFileName = file.name || 'photo.jpg';
       
       try {
-        // 완벽한 호환성을 위해 FileReader를 이용해 안전한 Blob으로 변환
-        currentFile = await fileToSafeBlob(file);
+        // iOS Safari의 악명높은 IndexedDB Blob 저장 버그(Error Preparing Blob/File data...)를 원천 차단하기 위해
+        // 썸네일뿐만 아니라 원본 이미지도 Base64 문자열로 변환하여 문자열 형태로 DB에 저장합니다.
+        currentFileBase64 = await fileToBase64(processFile);
       } catch (e) {
-        console.error('FileReader read failed:', e);
-        currentFile = file; // 최후의 보루
+        console.error('Base64 read failed:', e);
+        currentFileBase64 = null; 
       }
 
       // 로딩 해제
@@ -219,19 +218,22 @@ async function handleFileSelect(file) {
 // Save Photo
 // ──────────────────────────────────────
 async function handleSave() {
-  if (!currentFile || !currentThumbnail) return;
+  if (!currentFileBase64 || !currentThumbnail) {
+    showToast('파일 변환이 완료되지 않았습니다.');
+    return;
+  }
 
   try {
     const photoData = {
       id: generateId(),
-      imageBlob: currentFile, // 이미 안전한 Blob으로 변환되어 있음
+      imageDataUrl: currentFileBase64, // Blob 대신 순수 Base64 문자열을 저장 (아이폰 버그 완벽 회피)
       thumbnailDataUrl: currentThumbnail,
       date: currentExifData?.date || null,
       lat: currentExifData?.lat || null,
       lng: currentExifData?.lng || null,
       address: currentExifData?.address || null,
       memo: memoTextarea.value.trim(),
-      fileName: currentFile.name || 'photo.jpg',
+      fileName: currentFileName,
       createdAt: Date.now(),
     };
 
@@ -252,7 +254,8 @@ function handleCancel() {
 function resetUploadState() {
   currentExifData = null;
   currentThumbnail = null;
-  currentFile = null;
+  currentFileBase64 = null;
+  currentFileName = '';
   fileInput.value = '';
   exifPanel.classList.remove('active');
   memoSection.classList.remove('active');
