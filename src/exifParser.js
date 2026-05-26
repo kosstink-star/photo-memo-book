@@ -11,11 +11,11 @@ import exifr from 'exifr';
  */
 export async function extractExif(file) {
   try {
-    // exifr은 HEIC, JPEG, PNG 등의 메타데이터를 네이티브로 파싱하며,
-    // 날짜와 위/경도(소수점)를 자동으로 변환해서 줍니다.
-    const tags = await exifr.parse(file, true);
+    // exifr은 기본적으로 EXIF 및 GPS 블록을 파싱합니다.
+    const tags = await exifr.parse(file);
     
     if (!tags) {
+      alert(`EXIF 데이터가 비어있습니다. 파일타입: ${file.type}, 크기: ${file.size}`);
       return { date: null, lat: null, lng: null, allTags: {} };
     }
 
@@ -27,11 +27,26 @@ export async function extractExif(file) {
     }
 
     // exifr은 latitude, longitude 속성으로 소수점 좌표를 바로 제공합니다
-    const lat = tags.latitude != null ? tags.latitude : null;
-    const lng = tags.longitude != null ? tags.longitude : null;
+    let lat = tags.latitude != null ? tags.latitude : null;
+    let lng = tags.longitude != null ? tags.longitude : null;
+
+    // 만약 소수점 변환이 안 되었다면 직접 접근 (exifr 버전 차이 대비)
+    if (lat == null && tags.GPSLatitude) {
+      alert('자동 변환 실패로 GPS를 수동 계산합니다.');
+      lat = tags.GPSLatitude[0] + tags.GPSLatitude[1]/60 + tags.GPSLatitude[2]/3600;
+      if (tags.GPSLatitudeRef === 'S') lat = -lat;
+    }
+    if (lng == null && tags.GPSLongitude) {
+      lng = tags.GPSLongitude[0] + tags.GPSLongitude[1]/60 + tags.GPSLongitude[2]/3600;
+      if (tags.GPSLongitudeRef === 'W') lng = -lng;
+    }
+
+    // 디버깅: 파싱된 주요 태그 확인
+    // alert(`추출 성공! 날짜: ${date}, 위도: ${lat}, 경도: ${lng}`);
 
     return { date, lat, lng, allTags: tags };
   } catch (err) {
+    alert(`EXIF 파싱 에러 발생: ${err.message}`);
     console.warn('EXIF parsing error (exifr):', err);
     return { date: null, lat: null, lng: null, allTags: {} };
   }
