@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="사진의 EXIF 데이터를 브라우저에서 안전하게 추출하고 추억을 기록하세요. 외부 서버 전송 없이 로컬에서만 동작합니다." />
+  <!-- 보안: Content Security Policy - 외부 데이터 전송 차단, 허용된 리소스만 로드 -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self';
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' blob: data: https://*.tile.openstreetmap.org;
+    connect-src 'self' https://*.tile.openstreetmap.org;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+    form-action 'none';
+  " />
+  <!-- 보안: Referrer 정보 최소화 -->
+  <meta name="referrer" content="no-referrer" />
+  <title>추억 기록 - Local EXIF Photo Memo</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📸</text></svg>" />
+</head>
+<body>
+
+  <!-- ════════════════ Top App Bar ════════════════ -->
+  <header class="top-app-bar">
+    <div class="top-app-bar-inner">
+      <button class="icon-button" aria-label="설정" id="btn-settings">
+        <span class="material-symbols-outlined" style="font-size:24px;">settings_heart</span>
+      </button>
+      <h1>추억 기록</h1>
+      <button class="icon-button" aria-label="검색" id="btn-search">
+        <span class="material-symbols-outlined" style="font-size:24px;">search</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ════════════════ Main Content ════════════════ -->
+  <main class="main-content">
+
+    <!-- ──── Upload Section ──── -->
+    <section class="upload-area" id="upload-area">
+      <div id="upload-content">
+        <span class="material-symbols-outlined upload-icon">upload_file</span>
+        <h2>사진을 올려 추억을 기록하세요</h2>
+        <p>사진을 클릭하거나 드래그하여 업로드합니다.</p>
+        <span class="privacy-badge">
+          <span class="material-symbols-outlined" style="font-size:16px;">lock</span>
+          개인정보 보호 — 기기에만 안전하게 보관
+        </span>
+      </div>
+      <!-- Loading -->
+      <div class="upload-loading" id="upload-loading">
+        <div class="spinner"></div>
+        <p style="color:var(--color-on-surface-variant);font-size:14px;">EXIF 데이터를 분석하고 있습니다…</p>
+      </div>
+      <input type="file" accept="image/*" class="hidden" id="file-input" />
+    </section>
+
+    <!-- ──── EXIF Info Panel ──── -->
+    <section class="exif-info-panel" id="exif-panel">
+      <img id="exif-preview" class="hidden" alt="업로드 미리보기"
+           style="width:100%;max-height:260px;object-fit:cover;border-radius:var(--radius-md);margin-bottom:var(--space-md);" />
+      <h3>
+        <span class="material-symbols-outlined">info</span>
+        추출된 EXIF 정보
+      </h3>
+      <div class="exif-grid">
+        <!-- 촬영 일시 -->
+        <div class="exif-item">
+          <div class="exif-label">
+            <span class="material-symbols-outlined">calendar_month</span>
+            촬영 일시
+          </div>
+          <div class="exif-value" id="exif-date">—</div>
+        </div>
+        <!-- 위도 -->
+        <div class="exif-item">
+          <div class="exif-label">
+            <span class="material-symbols-outlined">north</span>
+            위도 (Latitude)
+          </div>
+          <div class="exif-value" id="exif-lat">—</div>
+        </div>
+        <!-- 경도 -->
+        <div class="exif-item full-width">
+          <div class="exif-label">
+            <span class="material-symbols-outlined">east</span>
+            경도 (Longitude)
+          </div>
+          <div class="exif-value" id="exif-lng">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ──── Memo Input ──── -->
+    <section class="memo-section" id="memo-section">
+      <div class="memo-input-container">
+        <textarea
+          class="memo-textarea"
+          id="memo-textarea"
+          placeholder="이 순간에 대한 메모를 남겨보세요..."
+          maxlength="500"
+        ></textarea>
+        <div class="memo-actions">
+          <button class="btn btn-secondary" id="btn-cancel">취소</button>
+          <button class="btn btn-primary" id="btn-save">
+            <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+            저장하기
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ Timeline View ════════════════ -->
+    <div class="view-container active" id="view-timeline">
+      <div class="section-header">
+        <h2>타임라인</h2>
+        <span class="section-badge" id="photo-count">최신순</span>
+      </div>
+      <div class="timeline-grid" id="timeline-grid"></div>
+      <!-- Empty State -->
+      <div class="empty-state" id="timeline-empty">
+        <span class="material-symbols-outlined">photo_library</span>
+        <p>아직 기록된 추억이 없습니다.<br/>사진을 업로드하여 첫 추억을 남겨보세요!</p>
+      </div>
+    </div>
+
+    <!-- ════════════════ Map View ════════════════ -->
+    <div class="view-container" id="view-map">
+      <div class="section-header">
+        <h2>추억 지도</h2>
+        <span class="section-badge">촬영 위치</span>
+      </div>
+      <div id="map-container"></div>
+    </div>
+
+  </main>
+
+  <!-- ════════════════ Bottom Nav (Mobile) ════════════════ -->
+  <nav class="bottom-nav" aria-label="하단 내비게이션">
+    <div class="bottom-nav-inner">
+      <button class="nav-item active" id="nav-timeline" aria-label="타임라인">
+        <span class="material-symbols-outlined" data-weight="fill">auto_awesome_motion</span>
+        <span>타임라인</span>
+      </button>
+      <button class="nav-item" id="nav-map" aria-label="지도">
+        <span class="material-symbols-outlined">map</span>
+        <span>지도</span>
+      </button>
+      <button class="nav-item" id="nav-add" aria-label="추가">
+        <span class="material-symbols-outlined">add_circle</span>
+        <span>추가</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- App Entry -->
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
