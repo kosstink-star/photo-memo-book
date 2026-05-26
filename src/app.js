@@ -346,7 +346,8 @@ async function renderTimeline() {
     photos = photos.filter(p => {
       const matchMemo = p.memo && p.memo.toLowerCase().includes(q);
       const matchAddr = p.address && p.address.toLowerCase().includes(q);
-      const matchDate = p.date && p.date.includes(q);
+      const formattedDate = formatDate(p.date) || '';
+      const matchDate = formattedDate.includes(q) || (p.date && p.date.includes(q));
       return matchMemo || matchAddr || matchDate;
     });
   }
@@ -522,13 +523,18 @@ function initEventListeners() {
           showToast('백업할 데이터가 없습니다.');
           return;
         }
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(photos));
+        
+        const blob = new Blob([JSON.stringify(photos)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
         const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("href", url);
         downloadAnchorNode.setAttribute("download", "photo_memo_backup.json");
         document.body.appendChild(downloadAnchorNode);
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
+        
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
         showToast('백업 파일이 다운로드되었습니다.');
       } catch (err) {
         console.error('Backup failed', err);

@@ -3,6 +3,7 @@
  * OpenStreetMap을 활용한 촬영 위치 시각화
  */
 import L from 'leaflet';
+import './leaflet-setup.js';
 import 'leaflet.markercluster';
 
 let mapInstance = null;
