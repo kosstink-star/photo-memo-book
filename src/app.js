@@ -104,7 +104,7 @@ async function reverseGeocode(lat, lng) {
   } catch (err) {
     console.warn('BigDataCloud API failed, trying JSONP fallback...', err);
     try {
-      // 2차 시도: Nominatim API JSONP 폴백 (Fetch 자체를 차단하는 아이폰 환경 우회)
+      // 2차 시도: Nominatim API JSONP 폴백
       const data2 = await new Promise((resolve, reject) => {
         const cbName = 'jsonp_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
         const timeout = setTimeout(() => {
@@ -134,9 +134,19 @@ async function reverseGeocode(lat, lng) {
       
       return data2.display_name || '주소 변환 불가(JSONP_NO_ADDR)';
     } catch (err2) {
-      console.error('Fallback Geocoding error:', err2);
-      // 에러 원인을 화면에 노출하여 디버깅
-      return `주소 차단됨 (보안설정)`;
+      console.warn('JSONP failed, trying AllOrigins Proxy fallback...', err2);
+      try {
+        // 3차 시도: CORS 프록시 우회 (도메인 차단 회피)
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=ko&email=test@example.com`)}`;
+        const res3 = await fetch(proxyUrl);
+        if (!res3.ok) throw new Error('PROXY_ERR');
+        const proxyData = await res3.json();
+        const data3 = JSON.parse(proxyData.contents);
+        return data3.display_name || '주소 변환 불가(PROXY_NO_ADDR)';
+      } catch (err3) {
+        console.error('All fallbacks failed:', err3);
+        return `주소 차단됨 (통신 불가)`;
+      }
     }
   }
 }
