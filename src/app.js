@@ -84,9 +84,13 @@ function formatCoord(value, isLat) {
 async function reverseGeocode(lat, lng) {
   if (lat == null || lng == null) return null;
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=ko`);
+    // Nominatim API는 브라우저 User-Agent 제약으로 막힐 수 있으므로 BigDataCloud 무료 클라이언트 API로 교체
+    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ko`);
+    if (!res.ok) throw new Error('API response not ok');
     const data = await res.json();
-    return data.display_name || null;
+    // 대한민국 서울특별시 강남구 형태의 주소 조립
+    const parts = [data.principalSubdivision, data.locality || data.city].filter(Boolean);
+    return parts.length > 0 ? parts.join(' ') : '주소 변환 불가';
   } catch (err) {
     console.error('Geocoding error:', err);
     return null;
@@ -129,10 +133,20 @@ async function handleFileSelect(file) {
   }
 
   Promise.all([extractExif(file), createThumbnail(processFile)])
-    .then(([exifData, thumbnail]) => {
+    .then(async ([exifData, thumbnail]) => {
       currentExifData = exifData;
       currentThumbnail = thumbnail;
-      currentFile = file;
+      
+      // iOS Safari의 DataCloneError 및 파일 참조 만료를 방지하기 위해 
+      // 파일을 선택하자마자 안전한 Blob 형태로 메모리에 미리 올려둡니다.
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        currentFile = new Blob([arrayBuffer], { type: file.type });
+        currentFile.name = file.name; // 이름 속성 보존
+      } catch (e) {
+        console.error('ArrayBuffer read failed:', e);
+        currentFile = file; // 실패 시 일단 원본 유지
+      }
 
       // 로딩 해제
       uploadLoading.classList.remove('active');
@@ -188,20 +202,16 @@ async function handleSave() {
   if (!currentFile || !currentThumbnail) return;
 
   try {
-    // iOS Safari 등에서 File 객체를 IndexedDB에 직접 저장할 때 발생하는 DataCloneError 방지
-    const arrayBuffer = await currentFile.arrayBuffer();
-    const safeBlob = new Blob([arrayBuffer], { type: currentFile.type });
-
     const photoData = {
       id: generateId(),
-      imageBlob: safeBlob,
+      imageBlob: currentFile, // 이미 안전한 Blob으로 변환되어 있음
       thumbnailDataUrl: currentThumbnail,
       date: currentExifData?.date || null,
       lat: currentExifData?.lat || null,
       lng: currentExifData?.lng || null,
       address: currentExifData?.address || null,
       memo: memoTextarea.value.trim(),
-      fileName: currentFile.name,
+      fileName: currentFile.name || 'photo.jpg',
       createdAt: Date.now(),
     };
 
