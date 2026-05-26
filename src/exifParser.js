@@ -36,32 +36,35 @@ function parseExifDate(exifDate) {
  */
 export function extractExif(file) {
   return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const img = new Image();
-      img.onload = function () {
-        EXIF.getData(img, function () {
-          const allTags = EXIF.getAllTags(this);
+    // 1. 만약 EXIF.getData가 실패하거나 무한 로딩될 경우를 대비한 타임아웃
+    const timeout = setTimeout(() => {
+      resolve({ date: null, lat: null, lng: null, allTags: {} });
+    }, 3000);
 
-          // 촬영 일시 추출
-          const dateTimeOriginal = EXIF.getTag(this, 'DateTimeOriginal');
-          const date = parseExifDate(dateTimeOriginal);
+    try {
+      // EXIF.js는 File 객체를 직접 읽을 수 있습니다. Image 태그 변환 과정을 생략하여 속도와 안정성을 높입니다.
+      EXIF.getData(file, function () {
+        clearTimeout(timeout);
+        const allTags = EXIF.getAllTags(this) || {};
 
-          // GPS 좌표 추출
-          const gpsLat = EXIF.getTag(this, 'GPSLatitude');
-          const gpsLatRef = EXIF.getTag(this, 'GPSLatitudeRef');
-          const gpsLng = EXIF.getTag(this, 'GPSLongitude');
-          const gpsLngRef = EXIF.getTag(this, 'GPSLongitudeRef');
+        const dateTimeOriginal = EXIF.getTag(this, 'DateTimeOriginal');
+        const date = parseExifDate(dateTimeOriginal);
 
-          const lat = dmsToDecimal(gpsLat, gpsLatRef);
-          const lng = dmsToDecimal(gpsLng, gpsLngRef);
+        const gpsLat = EXIF.getTag(this, 'GPSLatitude');
+        const gpsLatRef = EXIF.getTag(this, 'GPSLatitudeRef');
+        const gpsLng = EXIF.getTag(this, 'GPSLongitude');
+        const gpsLngRef = EXIF.getTag(this, 'GPSLongitudeRef');
 
-          resolve({ date, lat, lng, allTags });
-        });
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+        const lat = dmsToDecimal(gpsLat, gpsLatRef);
+        const lng = dmsToDecimal(gpsLng, gpsLngRef);
+
+        resolve({ date, lat, lng, allTags });
+      });
+    } catch (err) {
+      clearTimeout(timeout);
+      console.warn('EXIF parsing error:', err);
+      resolve({ date: null, lat: null, lng: null, allTags: {} });
+    }
   });
 }
 
@@ -73,10 +76,16 @@ export function extractExif(file) {
  */
 export function createThumbnail(file, maxWidth = 600) {
   return new Promise((resolve) => {
+    // 타임아웃 3초 설정
+    const timeout = setTimeout(() => {
+      resolve(null);
+    }, 3000);
+
     const reader = new FileReader();
     reader.onload = function (e) {
       const img = new Image();
       img.onload = function () {
+        clearTimeout(timeout);
         const canvas = document.createElement('canvas');
         const scale = maxWidth / img.width;
         canvas.width = maxWidth;
@@ -85,7 +94,16 @@ export function createThumbnail(file, maxWidth = 600) {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL('image/jpeg', 0.8));
       };
+      img.onerror = function () {
+        // 브라우저가 지원하지 않는 포맷(예: HEIC)일 경우 썸네일 생성 실패로 간주하되 중단되진 않게 함
+        clearTimeout(timeout);
+        resolve(e.target.result); // 원본 데이터 URL을 그대로 반환 (브라우저가 렌더링 못할 수도 있음)
+      };
       img.src = e.target.result;
+    };
+    reader.onerror = function () {
+      clearTimeout(timeout);
+      resolve(null);
     };
     reader.readAsDataURL(file);
   });
