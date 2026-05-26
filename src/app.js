@@ -26,6 +26,7 @@ const searchContainer = document.getElementById('search-container');
 const searchInput = document.getElementById('search-input');
 
 // 기타 UI
+const btnCancel = document.getElementById('btn-cancel');
 const timelineGrid = document.getElementById('timeline-grid');
 const timelineEmptyState = document.getElementById('timeline-empty');
 const photoCountBadge = document.getElementById('photo-count');
