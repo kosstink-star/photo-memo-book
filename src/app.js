@@ -99,21 +99,23 @@ async function reverseGeocode(lat, lng) {
   try {
     // 1차 시도: BigDataCloud API
     const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ko`);
-    if (!res.ok) throw new Error('API 1 failed');
+    if (!res.ok) throw new Error(`API1_ERR_${res.status}`);
     const data = await res.json();
     const parts = [data.principalSubdivision, data.locality || data.city].filter(Boolean);
     if (parts.length > 0) return parts.join(' ');
-    throw new Error('No address found in API 1');
+    throw new Error('API1_NO_ADDR');
   } catch (err) {
     console.warn('BigDataCloud API failed, trying fallback...', err);
     try {
       // 2차 시도: Nominatim API 폴백 (이메일 파라미터 추가하여 차단 방지)
       const res2 = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=ko&email=test@example.com`);
+      if (!res2.ok) throw new Error(`API2_ERR_${res2.status}`);
       const data2 = await res2.json();
-      return data2.display_name || '주소 변환 불가';
+      return data2.display_name || '주소 변환 불가(API2_NO_ADDR)';
     } catch (err2) {
       console.error('Fallback Geocoding error:', err2);
-      return '주소를 찾을 수 없음';
+      // 에러 원인을 화면에 노출하여 디버깅
+      return `주소 오류: ${err.message.substring(0,10)} / ${err2.message.substring(0,10)}`;
     }
   }
 }
@@ -239,7 +241,7 @@ async function handleSave() {
     await renderTimeline();
   } catch (err) {
     console.error('Save failed:', err);
-    showToast('저장 중 오류가 발생했습니다.');
+    showToast(`저장 오류: ${err.name} - ${err.message}`);
   }
 }
 
