@@ -62,6 +62,19 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove('show'), 2600);
 }
 
+function fileToSafeBlob(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const blob = new Blob([e.target.result], { type: file.type });
+      blob.name = file.name;
+      resolve(blob);
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 function formatDate(isoString) {
   if (!isoString) return null;
   const d = new Date(isoString);
@@ -84,16 +97,24 @@ function formatCoord(value, isLat) {
 async function reverseGeocode(lat, lng) {
   if (lat == null || lng == null) return null;
   try {
-    // Nominatim API는 브라우저 User-Agent 제약으로 막힐 수 있으므로 BigDataCloud 무료 클라이언트 API로 교체
+    // 1차 시도: BigDataCloud API
     const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ko`);
-    if (!res.ok) throw new Error('API response not ok');
+    if (!res.ok) throw new Error('API 1 failed');
     const data = await res.json();
-    // 대한민국 서울특별시 강남구 형태의 주소 조립
     const parts = [data.principalSubdivision, data.locality || data.city].filter(Boolean);
-    return parts.length > 0 ? parts.join(' ') : '주소 변환 불가';
+    if (parts.length > 0) return parts.join(' ');
+    throw new Error('No address found in API 1');
   } catch (err) {
-    console.error('Geocoding error:', err);
-    return null;
+    console.warn('BigDataCloud API failed, trying fallback...', err);
+    try {
+      // 2차 시도: Nominatim API 폴백 (이메일 파라미터 추가하여 차단 방지)
+      const res2 = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=ko&email=test@example.com`);
+      const data2 = await res2.json();
+      return data2.display_name || '주소 변환 불가';
+    } catch (err2) {
+      console.error('Fallback Geocoding error:', err2);
+      return '주소를 찾을 수 없음';
+    }
   }
 }
 
@@ -137,15 +158,12 @@ async function handleFileSelect(file) {
       currentExifData = exifData;
       currentThumbnail = thumbnail;
       
-      // iOS Safari의 DataCloneError 및 파일 참조 만료를 방지하기 위해 
-      // 파일을 선택하자마자 안전한 Blob 형태로 메모리에 미리 올려둡니다.
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        currentFile = new Blob([arrayBuffer], { type: file.type });
-        currentFile.name = file.name; // 이름 속성 보존
+        // 완벽한 호환성을 위해 FileReader를 이용해 안전한 Blob으로 변환
+        currentFile = await fileToSafeBlob(file);
       } catch (e) {
-        console.error('ArrayBuffer read failed:', e);
-        currentFile = file; // 실패 시 일단 원본 유지
+        console.error('FileReader read failed:', e);
+        currentFile = file; // 최후의 보루
       }
 
       // 로딩 해제
