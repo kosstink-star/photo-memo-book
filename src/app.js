@@ -102,17 +102,41 @@ async function reverseGeocode(lat, lng) {
     if (parts.length > 0) return parts.join(' ');
     throw new Error('API1_NO_ADDR');
   } catch (err) {
-    console.warn('BigDataCloud API failed, trying fallback...', err);
+    console.warn('BigDataCloud API failed, trying JSONP fallback...', err);
     try {
-      // 2차 시도: Nominatim API 폴백 (이메일 파라미터 추가하여 차단 방지)
-      const res2 = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=ko&email=test@example.com`);
-      if (!res2.ok) throw new Error(`API2_ERR_${res2.status}`);
-      const data2 = await res2.json();
-      return data2.display_name || '주소 변환 불가(API2_NO_ADDR)';
+      // 2차 시도: Nominatim API JSONP 폴백 (Fetch 자체를 차단하는 아이폰 환경 우회)
+      const data2 = await new Promise((resolve, reject) => {
+        const cbName = 'jsonp_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+        const timeout = setTimeout(() => {
+          delete window[cbName];
+          reject(new Error('JSONP_TIMEOUT'));
+        }, 5000);
+
+        window[cbName] = function(data) {
+          clearTimeout(timeout);
+          delete window[cbName];
+          resolve(data);
+        };
+
+        const script = document.createElement('script');
+        script.src = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=ko&email=test@example.com&json_callback=${cbName}`;
+        script.onerror = () => {
+          clearTimeout(timeout);
+          delete window[cbName];
+          reject(new Error('JSONP_FAILED'));
+        };
+        
+        document.body.appendChild(script);
+        script.onload = () => {
+          try { document.body.removeChild(script); } catch(e){}
+        };
+      });
+      
+      return data2.display_name || '주소 변환 불가(JSONP_NO_ADDR)';
     } catch (err2) {
       console.error('Fallback Geocoding error:', err2);
       // 에러 원인을 화면에 노출하여 디버깅
-      return `주소 오류: ${err.message.substring(0,10)} / ${err2.message.substring(0,10)}`;
+      return `주소 차단됨 (보안설정)`;
     }
   }
 }
