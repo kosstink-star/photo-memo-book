@@ -3,6 +3,7 @@
  * 뷰 토글, 이벤트 리스너, UI 렌더링
  */
 import './style.css';
+import heic2any from 'heic2any';
 import { extractExif, createThumbnail } from './exifParser.js';
 import { savePhoto, getAllPhotos, deletePhoto, getPhotoCount } from './storage.js';
 import { initMap, refreshMap, renderMarkers } from './map.js';
@@ -83,8 +84,10 @@ function formatCoord(value, isLat) {
 // ──────────────────────────────────────
 // File Upload & EXIF Extraction
 // ──────────────────────────────────────
-function handleFileSelect(file) {
-  if (!file || !file.type.startsWith('image/')) {
+async function handleFileSelect(file) {
+  const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic';
+
+  if (!file || (!file.type.startsWith('image/') && !isHeic)) {
     showToast('이미지 파일만 업로드할 수 있습니다.');
     return;
   }
@@ -95,7 +98,25 @@ function handleFileSelect(file) {
   exifPanel.classList.remove('active');
   memoSection.classList.remove('active');
 
-  Promise.all([extractExif(file), createThumbnail(file)])
+  let processFile = file;
+
+  try {
+    if (isHeic) {
+      document.querySelector('#upload-loading p').textContent = 'HEIC 포맷을 변환 중입니다 (최대 10초 소요)...';
+      const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 });
+      const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+      processFile = new File([blob], file.name.replace(/\.heic$/i, '.jpg'), { type: 'image/jpeg' });
+      document.querySelector('#upload-loading p').textContent = 'EXIF 데이터를 분석하고 있습니다...';
+    }
+  } catch (err) {
+    console.error('HEIC conversion failed:', err);
+    uploadLoading.classList.remove('active');
+    uploadContent.classList.remove('hidden');
+    showToast('HEIC 이미지 변환 중 오류가 발생했습니다.');
+    return;
+  }
+
+  Promise.all([extractExif(processFile), createThumbnail(processFile)])
     .then(([exifData, thumbnail]) => {
       currentExifData = exifData;
       currentThumbnail = thumbnail;

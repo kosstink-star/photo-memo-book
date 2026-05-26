@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "exif-js": "^2.3.0",
+    "heic2any": "^0.0.4",
     "idb": "^8.0.3",
     "leaflet": "^1.9.4"
   }
