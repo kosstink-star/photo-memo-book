@@ -73,12 +73,18 @@ const importInput = document.getElementById('import-input');
 // 모달 요소 (Parallax 스타일)
 const photoModal = document.getElementById('photo-modal');
 const photoModalClose = document.getElementById('photo-modal-close');
+const photoModalEdit = document.getElementById('photo-modal-edit');
+const photoModalExport = document.getElementById('photo-modal-export');
 const photoModalImg = document.getElementById('photo-modal-img');
 const photoModalDate = document.getElementById('photo-modal-date');
+const photoModalDateInput = document.getElementById('photo-modal-date-input');
 const photoModalLocation = document.getElementById('photo-modal-location');
+const photoModalLocationInput = document.getElementById('photo-modal-location-input');
 const photoModalMemo = document.getElementById('photo-modal-memo');
+const photoModalMemoTextarea = document.getElementById('photo-modal-memo-textarea');
 const photoModalTitle = document.getElementById('photo-modal-title');
 const photoModalTag = document.getElementById('photo-modal-tag');
+const photoModalSaveBtn = document.getElementById('photo-modal-save-btn');
 
 // 홈 뷰 요소
 const homeTotalCount = document.getElementById('home-total-count');
@@ -107,9 +113,17 @@ let currentThumbnail = null;
 let currentFileBase64 = null;
 let currentFileName = '';
 let mapInitialized = false;
-let searchQuery = '';
 let currentFilter = 'all'; // 'all', 'week', 'month', 'year', 'location'
 let currentLocationFilter = '';
+let searchQuery = '';
+let currentEditingPhoto = null;
+
+// 해시태그 포맷팅 유틸리티
+function formatHashtags(text) {
+  if (!text) return '';
+  // 정규식: # 뒤에 영문, 한글, 숫자가 오고 그 뒤에 공백이나 구두점이 오는 경우
+  return text.replace(/(#[A-Za-z0-9가-힣_]+)/g, '<span class="hashtag" data-tag="$1">$1</span>');
+}
 
 // ──────────────────────────────────────
 // Utilities
@@ -216,6 +230,84 @@ async function reverseGeocode(lat, lng) {
 // ──────────────────────────────────────
 // File Upload & EXIF Extraction
 // ──────────────────────────────────────
+async function handleFilesSelect(files) {
+  if (files.length === 0) return;
+  
+  if (files.length === 1) {
+    handleFileSelect(files[0]);
+    return;
+  }
+
+  // 다중 파일 처리 로직 (자동 저장)
+  switchView('timeline');
+  uploadArea.classList.remove('hidden');
+  uploadContent.classList.add('hidden');
+  uploadLoading.classList.remove('hidden');
+  uploadLoading.classList.add('active');
+  exifPanel.classList.add('hidden');
+
+  let successCount = 0;
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic';
+    
+    if (!file.type.startsWith('image/') && !isHeic) continue;
+
+    uploadLoading.querySelector('p').textContent = `다중 사진 처리 중... (${i+1}/${files.length})`;
+
+    let processFile = file;
+    try {
+      if (isHeic) {
+        const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 });
+        const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+        processFile = new File([blob], file.name.replace(/\.heic$/i, '.jpg'), { type: 'image/jpeg' });
+      }
+      
+      const [exifData, thumbnail, base64] = await Promise.all([
+        extractExif(processFile).catch(() => ({})),
+        createThumbnail(processFile).catch(() => null),
+        fileToBase64(processFile).catch(() => null)
+      ]);
+
+      if (base64 && thumbnail) {
+        let address = null;
+        if (exifData.lat != null && exifData.lng != null) {
+          address = await reverseGeocode(exifData.lat, exifData.lng).catch(() => null);
+        }
+
+        const photoData = {
+          id: generateId(),
+          imageDataUrl: base64,
+          thumbnailDataUrl: thumbnail,
+          date: exifData.date || new Date().toISOString(),
+          lat: exifData.lat || null,
+          lng: exifData.lng || null,
+          address: address || null,
+          memo: '',
+          fileName: processFile.name,
+          createdAt: Date.now(),
+        };
+
+        await savePhoto(photoData);
+        successCount++;
+      }
+    } catch (e) {
+      console.error('Batch upload error for file', file.name, e);
+    }
+  }
+
+  uploadLoading.classList.add('hidden');
+  uploadLoading.classList.remove('active');
+  uploadArea.classList.add('hidden');
+  
+  showToast(`${successCount}개의 추억이 저장되었습니다. 카드를 클릭해 내용을 수정할 수 있습니다.`);
+  renderTimeline();
+  updateHomeView();
+  if (currentView === 'map') {
+    getAllPhotos().then(renderMarkers);
+  }
+}
+
 async function handleFileSelect(file) {
   const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic';
 
@@ -568,7 +660,7 @@ async function renderTimeline() {
           </button>
           <!-- Bottom Info -->
           <div class="absolute bottom-6 left-6 right-6">
-            <h3 class="font-title-md text-title-md text-white mb-1">${photo.memo || '메모 없음'}</h3>
+            <h3 class="font-title-md text-title-md text-white mb-1">${formatHashtags(photo.memo || '메모 없음')}</h3>
             ${locationStr ? `<p class="font-body-sm text-body-sm text-white/70">${locationStr}</p>` : ''}
           </div>
         </section>
@@ -639,6 +731,25 @@ function switchView(view) {
   }
 }
 
+// 해시태그 클릭 처리 (이벤트 위임)
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('hashtag')) {
+    const tag = e.target.dataset.tag;
+    searchQuery = tag;
+    if (searchInput) searchInput.value = tag;
+    searchContainer.classList.remove('hidden');
+    
+    // 모달이 열려있으면 닫기
+    document.querySelectorAll('.photo-modal').forEach(modal => {
+      modal.classList.remove('active');
+      modal.setAttribute('aria-hidden', 'true');
+    });
+
+    switchView('timeline');
+    renderTimeline();
+  }
+});
+
 // ──────────────────────────────────────
 // Event Listeners
 // ──────────────────────────────────────
@@ -675,6 +786,7 @@ function initEventListeners() {
       if (modal) {
         modal.classList.remove('active');
         modal.setAttribute('aria-hidden', 'true');
+        exitPhotoModalEditMode();
       }
     });
   });
@@ -684,9 +796,77 @@ function initEventListeners() {
       if (e.target === modal) {
         modal.classList.remove('active');
         modal.setAttribute('aria-hidden', 'true');
+        exitPhotoModalEditMode();
       }
     });
   });
+
+  // 모달 수정/저장/공유 로직
+  if (photoModalEdit) {
+    photoModalEdit.addEventListener('click', () => {
+      togglePhotoModalEditMode();
+    });
+  }
+
+  if (photoModalSaveBtn) {
+    photoModalSaveBtn.addEventListener('click', async () => {
+      if (!currentEditingPhoto) return;
+      
+      const newDateVal = photoModalDateInput.value;
+      const newLocationVal = photoModalLocationInput.value.trim();
+      const newMemoVal = photoModalMemoTextarea.value.trim();
+      
+      currentEditingPhoto.date = newDateVal ? new Date(newDateVal).toISOString() : currentEditingPhoto.date;
+      currentEditingPhoto.address = newLocationVal || currentEditingPhoto.address;
+      currentEditingPhoto.memo = newMemoVal;
+      
+      await savePhoto(currentEditingPhoto);
+      showToast('성공적으로 수정되었습니다.');
+      
+      // 모달 뷰어 업데이트
+      openPhotoModal(currentEditingPhoto);
+      
+      // 타임라인 다시 그리기
+      renderTimeline();
+    });
+  }
+
+  if (photoModalExport) {
+    photoModalExport.addEventListener('click', async () => {
+      try {
+        const html2canvas = (await import('html2canvas')).default;
+        
+        // 일시적으로 수정 관련 버튼 숨기기
+        const controls = photoModal.querySelector('.absolute.top-4.right-4.z-10');
+        if (controls) controls.style.display = 'none';
+        
+        // 렌더링 타겟
+        const targetElement = photoModal.querySelector('.max-w-3xl');
+        
+        const canvas = await html2canvas(targetElement, {
+          backgroundColor: '#0d1117',
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+        });
+        
+        if (controls) controls.style.display = 'flex';
+
+        const image = canvas.toDataURL('image/png', 1.0);
+        const link = document.createElement('a');
+        link.download = `memoirs_${Date.now()}.png`;
+        link.href = image;
+        link.click();
+        
+        showToast('이미지가 성공적으로 저장되었습니다.');
+      } catch (err) {
+        console.error('html2canvas error', err);
+        showToast('이미지 저장 중 오류가 발생했습니다.');
+        const controls = photoModal.querySelector('.absolute.top-4.right-4.z-10');
+        if (controls) controls.style.display = 'flex';
+      }
+    });
+  }
 
   // 설정 모달 열기
   if (btnSettings) {
@@ -772,8 +952,8 @@ function initEventListeners() {
 
   // 파일 선택
   fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) handleFileSelect(file);
+    const files = Array.from(e.target.files);
+    if (files.length > 0) handleFilesSelect(files);
   });
 
   // 드래그 앤 드롭
@@ -787,8 +967,8 @@ function initEventListeners() {
   uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadArea.classList.remove('border-primary-container/50');
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) handleFilesSelect(files);
   });
 
   // 필터 바 이벤트
@@ -874,6 +1054,9 @@ function initEventListeners() {
 // Modal Helper (screen9 Parallax Style)
 // ──────────────────────────────────────
 function openPhotoModal(photo) {
+  currentEditingPhoto = photo;
+  exitPhotoModalEditMode();
+
   photoModalImg.src = photo.imageDataUrl || photo.thumbnailDataUrl;
   photoModalImg.alt = photo.fileName || '사진';
 
@@ -889,7 +1072,7 @@ function openPhotoModal(photo) {
     photoModalLocation.textContent = '위치 정보 없음';
   }
 
-  photoModalMemo.textContent = photo.memo || '메모가 없습니다.';
+  photoModalMemo.innerHTML = formatHashtags(photo.memo) || '메모가 없습니다.';
 
   photoModal.classList.add('active');
   photoModal.setAttribute('aria-hidden', 'false');
@@ -901,6 +1084,50 @@ function openPhotoModal(photo) {
       const scroll = modalContent.scrollTop;
       photoModalImg.style.transform = `translateY(${scroll * 0.4}px) scale(1.1)`;
     });
+  }
+}
+
+function togglePhotoModalEditMode() {
+  const isEditing = !photoModalDate.classList.contains('hidden');
+  
+  if (isEditing) {
+    // 편집 모드로 진입
+    photoModalDate.classList.add('hidden');
+    photoModalDateInput.classList.remove('hidden');
+    if (currentEditingPhoto && currentEditingPhoto.date) {
+      photoModalDateInput.value = new Date(currentEditingPhoto.date).toISOString().split('T')[0];
+    } else {
+      photoModalDateInput.value = '';
+    }
+
+    photoModalLocation.classList.add('hidden');
+    photoModalLocationInput.classList.remove('hidden');
+    photoModalLocationInput.value = currentEditingPhoto?.address || '';
+
+    photoModalMemo.classList.add('hidden');
+    photoModalMemoTextarea.classList.remove('hidden');
+    photoModalMemoTextarea.value = currentEditingPhoto?.memo || '';
+
+    photoModalSaveBtn.classList.remove('hidden');
+    photoModalEdit.querySelector('.material-symbols-outlined').textContent = 'edit_off';
+  } else {
+    exitPhotoModalEditMode();
+  }
+}
+
+function exitPhotoModalEditMode() {
+  photoModalDate.classList.remove('hidden');
+  photoModalDateInput.classList.add('hidden');
+  
+  photoModalLocation.classList.remove('hidden');
+  photoModalLocationInput.classList.add('hidden');
+  
+  photoModalMemo.classList.remove('hidden');
+  photoModalMemoTextarea.classList.add('hidden');
+  
+  photoModalSaveBtn.classList.add('hidden');
+  if(photoModalEdit) {
+    photoModalEdit.querySelector('.material-symbols-outlined').textContent = 'edit';
   }
 }
 

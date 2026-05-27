@@ -1,9 +1,33 @@
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      manifest: {
+        name: 'Memoirs - 추억 기록',
+        short_name: 'Memoirs',
+        description: '사진의 EXIF 데이터를 브라우저에서 안전하게 추출하고 추억을 기록하세요.',
+        theme_color: '#191f31',
+        background_color: '#0d1117',
+        display: 'standalone',
+        icons: [
+          {
+            src: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📸</text></svg>',
+            sizes: '192x192',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        maximumFileSizeToCacheInBytes: 5000000 // 5MB
+      }
+    })
   ],
   // GitHub Pages 배포 시 하위 경로 설정
   base: '/photo-memo-book/',

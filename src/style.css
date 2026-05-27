@@ -246,6 +246,17 @@ body {
   border: none;
 }
 
+/* ── Hashtag ── */
+.hashtag {
+  color: #00f0ff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.hashtag:hover {
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  text-decoration: underline;
+}
+
 /* ── Leaflet Cluster Override ── */
 .marker-cluster-small,
 .marker-cluster-medium,
