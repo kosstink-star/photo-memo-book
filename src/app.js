@@ -51,6 +51,17 @@ const exifAddress = document.getElementById('exif-address');
 const exifCoord = document.getElementById('exif-coord');
 const exifPreview = document.getElementById('exif-preview');
 
+// 수동 입력 요소
+const manualDateWrapper = document.getElementById('manual-date-wrapper');
+const manualDateInput = document.getElementById('manual-date');
+const manualAddressWrapper = document.getElementById('manual-address-wrapper');
+const manualAddressInput = document.getElementById('manual-address');
+
+// 필터 바 요소
+const filterBar = document.getElementById('filter-bar');
+const locationFilterWrapper = document.getElementById('location-filter-wrapper');
+const locationFilterSelect = document.getElementById('location-filter-select');
+
 // 설정 및 백업 요소
 const btnSettings = document.getElementById('btn-settings');
 const settingsModal = document.getElementById('settings-modal');
@@ -97,6 +108,8 @@ let currentFileBase64 = null;
 let currentFileName = '';
 let mapInitialized = false;
 let searchQuery = '';
+let currentFilter = 'all'; // 'all', 'week', 'month', 'year', 'location'
+let currentLocationFilter = '';
 
 // ──────────────────────────────────────
 // Utilities
@@ -262,11 +275,21 @@ async function handleFileSelect(file) {
       exifPreview.classList.remove('hidden');
 
       // EXIF 정보 표시
-      exifDate.textContent = formatDate(exifData.date) || '정보 없음';
+      if (exifData.date) {
+        exifDate.textContent = formatDate(exifData.date);
+        exifDate.classList.remove('hidden');
+        manualDateWrapper.classList.add('hidden');
+      } else {
+        exifDate.classList.add('hidden');
+        manualDateWrapper.classList.remove('hidden');
+        manualDateInput.value = new Date().toISOString().split('T')[0]; // 기본값: 오늘
+      }
 
       if (exifData.lat != null && exifData.lng != null) {
         exifCoord.textContent = `${exifData.lat.toFixed(5)}, ${exifData.lng.toFixed(5)}`;
         exifAddress.textContent = '주소를 불러오는 중...';
+        exifAddress.classList.remove('hidden');
+        manualAddressWrapper.classList.add('hidden');
 
         reverseGeocode(exifData.lat, exifData.lng).then(address => {
           if (address) {
@@ -278,7 +301,9 @@ async function handleFileSelect(file) {
         });
       } else {
         exifCoord.textContent = '정보 없음';
-        exifAddress.textContent = '위치 정보 없음';
+        exifAddress.classList.add('hidden');
+        manualAddressWrapper.classList.remove('hidden');
+        manualAddressInput.value = '';
       }
 
       // 패널 표시
@@ -305,14 +330,28 @@ async function handleSave() {
   }
 
   try {
+    // 수동 입력값 적용
+    let finalDate = currentExifData?.date || null;
+    if (!finalDate && !manualDateWrapper.classList.contains('hidden')) {
+      const dateVal = manualDateInput.value;
+      if (dateVal) {
+        finalDate = new Date(dateVal).toISOString();
+      }
+    }
+
+    let finalAddress = currentExifData?.address || null;
+    if (!finalAddress && !manualAddressWrapper.classList.contains('hidden')) {
+      finalAddress = manualAddressInput.value.trim() || null;
+    }
+
     const photoData = {
       id: generateId(),
       imageDataUrl: currentFileBase64,
       thumbnailDataUrl: currentThumbnail,
-      date: currentExifData?.date || null,
+      date: finalDate,
       lat: currentExifData?.lat || null,
       lng: currentExifData?.lng || null,
-      address: currentExifData?.address || null,
+      address: finalAddress,
       memo: memoTextarea.value.trim(),
       fileName: currentFileName,
       createdAt: Date.now(),
@@ -402,6 +441,14 @@ async function updateHomeView() {
 async function renderTimeline() {
   let photos = await getAllPhotos();
 
+  // 날짜 기반 정렬 (최신순)
+  photos.sort((a, b) => {
+    const timeA = a.date ? new Date(a.date).getTime() : a.createdAt;
+    const timeB = b.date ? new Date(b.date).getTime() : b.createdAt;
+    return timeB - timeA;
+  });
+
+  // 검색 필터
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     photos = photos.filter(p => {
@@ -411,6 +458,56 @@ async function renderTimeline() {
       const matchDate = formattedDate.includes(q) || (p.date && p.date.includes(q));
       return matchMemo || matchAddr || matchDate;
     });
+  }
+
+  // 시간/장소 필터
+  const now = new Date();
+  if (currentFilter === 'week') {
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    photos = photos.filter(p => {
+      const d = p.date ? new Date(p.date) : new Date(p.createdAt);
+      return d >= oneWeekAgo && d <= now;
+    });
+  } else if (currentFilter === 'month') {
+    photos = photos.filter(p => {
+      const d = p.date ? new Date(p.date) : new Date(p.createdAt);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+  } else if (currentFilter === 'year') {
+    photos = photos.filter(p => {
+      const d = p.date ? new Date(p.date) : new Date(p.createdAt);
+      return d.getFullYear() === now.getFullYear();
+    });
+  } else if (currentFilter === 'location' && currentLocationFilter) {
+    photos = photos.filter(p => p.address && p.address.includes(currentLocationFilter));
+  }
+
+  // 장소 옵션 업데이트 (location 필터 시)
+  if (currentFilter === 'location') {
+    const allPhotos = await getAllPhotos();
+    const locations = new Set();
+    allPhotos.forEach(p => {
+      if (p.address) {
+        // 첫 번째 부분(시/도)이나 두 번째 부분(구/군)을 키로 사용
+        const parts = p.address.split(' ');
+        if (parts.length > 0) {
+          locations.add(parts[0]);
+        }
+      }
+    });
+    
+    // 현재 선택된 옵션 유지하며 select 재구성
+    locationFilterSelect.innerHTML = '<option value="">전체 장소</option>';
+    Array.from(locations).sort().forEach(loc => {
+      const opt = document.createElement('option');
+      opt.value = loc;
+      opt.textContent = loc;
+      if (loc === currentLocationFilter) opt.selected = true;
+      locationFilterSelect.appendChild(opt);
+    });
+    locationFilterWrapper.classList.remove('hidden');
+  } else {
+    locationFilterWrapper.classList.add('hidden');
   }
 
   const count = photos.length;
@@ -688,6 +785,29 @@ function initEventListeners() {
     const file = e.dataTransfer.files[0];
     if (file) handleFileSelect(file);
   });
+
+  // 필터 바 이벤트
+  if (filterBar) {
+    filterBar.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        // 기존 active 제거
+        filterBar.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        currentFilter = e.target.dataset.filter;
+        currentLocationFilter = ''; // 초기화
+        if (locationFilterSelect) locationFilterSelect.value = '';
+        renderTimeline();
+      });
+    });
+  }
+
+  if (locationFilterSelect) {
+    locationFilterSelect.addEventListener('change', (e) => {
+      currentLocationFilter = e.target.value;
+      renderTimeline();
+    });
+  }
 
   // 저장 / 취소
   btnSave.addEventListener('click', handleSave);

@@ -24,10 +24,10 @@ export function initMap(containerId) {
     attributionControl: true,
   }).setView([37.5665, 126.9780], 6); // 서울 중심, 한국 전체 보이는 줌
 
-  // 다크 모드용 CartoDB DarkMatter 타일
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  // 밝은 색상 OpenStreetMap 타일 (CSP 호환)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(mapInstance);
 
   markersLayer = L.markerClusterGroup({

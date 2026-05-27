@@ -170,24 +170,37 @@
               </div>
               <div class="glass-surface glass-edge rounded-lg p-card-padding glow-cyan">
                 <div class="flex flex-col gap-6">
+                  <!-- 날짜 -->
                   <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
                       <span class="material-symbols-outlined text-primary-container">calendar_today</span>
                     </div>
-                    <div>
+                    <div class="flex-1">
                       <p class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1">날짜</p>
                       <p class="font-title-md text-title-md text-white" id="exif-date">—</p>
+                      <!-- 수동 날짜 입력 (EXIF 없을 때 표시) -->
+                      <div class="hidden mt-2" id="manual-date-wrapper">
+                        <input type="date" id="manual-date" class="w-full bg-surface-container border border-white/20 rounded-lg px-3 py-2 text-on-surface text-body-sm focus:outline-none focus:border-primary-container/50" />
+                        <p class="text-[11px] text-on-surface-variant/50 mt-1">날짜가 추출되지 않았습니다. 직접 입력하세요.</p>
+                      </div>
                     </div>
                   </div>
+                  <!-- 주소 -->
                   <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
                       <span class="material-symbols-outlined text-primary-container">location_on</span>
                     </div>
-                    <div>
+                    <div class="flex-1">
                       <p class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1">주소</p>
                       <p class="font-title-md text-title-md text-white" id="exif-address">—</p>
+                      <!-- 수동 주소 입력 (EXIF 없을 때 표시) -->
+                      <div class="hidden mt-2" id="manual-address-wrapper">
+                        <input type="text" id="manual-address" placeholder="촬영 장소를 입력하세요" class="w-full bg-surface-container border border-white/20 rounded-lg px-3 py-2 text-on-surface text-body-sm placeholder-on-surface-variant/50 focus:outline-none focus:border-primary-container/50" />
+                        <p class="text-[11px] text-on-surface-variant/50 mt-1">위치 정보가 추출되지 않았습니다. 직접 입력하세요.</p>
+                      </div>
                     </div>
                   </div>
+                  <!-- GPS -->
                   <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
                       <span class="material-symbols-outlined text-primary-container">explore</span>
@@ -222,9 +235,25 @@
 
         <!-- Timeline Cards (Dynamically rendered by JS) -->
         <div class="col-span-4 md:col-span-12" id="timeline-cards-wrapper">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">기록된 추억</h2>
-            <span class="font-label-caps text-label-caps text-on-surface-variant" id="photo-count">최신순</span>
+          <div class="flex flex-col gap-4 mb-6">
+            <div class="flex justify-between items-center">
+              <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">기록된 추억</h2>
+              <span class="font-label-caps text-label-caps text-on-surface-variant" id="photo-count">최신순</span>
+            </div>
+            <!-- ═══ Filter Bar ═══ -->
+            <div class="flex gap-2 overflow-x-auto pb-1" id="filter-bar">
+              <button class="filter-btn active" data-filter="all">전체</button>
+              <button class="filter-btn" data-filter="week">이번 주</button>
+              <button class="filter-btn" data-filter="month">이번 달</button>
+              <button class="filter-btn" data-filter="year">올해</button>
+              <button class="filter-btn" data-filter="location">장소별</button>
+            </div>
+            <!-- 장소별 필터 드롭다운 (장소 선택 시 표시) -->
+            <div class="hidden" id="location-filter-wrapper">
+              <select id="location-filter-select" class="w-full bg-surface-container border border-white/20 rounded-lg px-4 py-3 text-on-surface text-body-sm focus:outline-none focus:border-primary-container/50 appearance-none cursor-pointer">
+                <option value="">전체 장소</option>
+              </select>
+            </div>
           </div>
           <div class="grid grid-cols-4 md:grid-cols-12 gap-grid-gutter" id="timeline-grid"></div>
 
