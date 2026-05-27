@@ -228,6 +228,7 @@ async function handleFileSelect(file) {
   switchView('timeline');
 
   // 로딩 표시
+  uploadArea.classList.remove('hidden');
   uploadContent.classList.add('hidden');
   uploadLoading.classList.remove('hidden');
   uploadLoading.classList.add('active');
@@ -248,6 +249,7 @@ async function handleFileSelect(file) {
     uploadLoading.classList.add('hidden');
     uploadLoading.classList.remove('active');
     uploadContent.classList.remove('hidden');
+    uploadArea.classList.add('hidden');
     showToast('HEIC 이미지 변환 중 오류가 발생했습니다.');
     return;
   }
@@ -308,6 +310,7 @@ async function handleFileSelect(file) {
 
       // 패널 표시
       exifPanel.classList.remove('hidden');
+      uploadArea.classList.add('hidden'); // 로딩 끝났으므로 업로드 영역 숨김
       memoTextarea.value = '';
       memoTextarea.focus();
     })
@@ -316,6 +319,7 @@ async function handleFileSelect(file) {
       uploadLoading.classList.add('hidden');
       uploadLoading.classList.remove('active');
       uploadContent.classList.remove('hidden');
+      uploadArea.classList.add('hidden');
       showToast('사진 분석 중 오류가 발생했습니다.');
     });
 }
@@ -380,6 +384,7 @@ function resetUploadState() {
   fileInput.value = '';
   exifPanel.classList.add('hidden');
   exifPreview.classList.add('hidden');
+  uploadArea.classList.add('hidden');
   memoTextarea.value = '';
 }
 

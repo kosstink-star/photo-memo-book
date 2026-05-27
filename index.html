@@ -89,19 +89,19 @@
         </section>
 
         <!-- Recent Memory Card (screen10: col-span-7) -->
-        <section class="col-span-4 md:col-span-7 glass-surface rounded-lg overflow-hidden relative min-h-[300px] md:min-h-[400px] group" id="home-recent-card" style="display:none;">
+        <section class="col-span-4 md:col-span-7 glass-surface rounded-lg overflow-hidden relative min-h-[220px] md:min-h-[300px] group" id="home-recent-card" style="display:none;">
           <img id="home-recent-img" alt="최근 추억" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="" />
-          <div class="absolute bottom-6 left-6 right-6 glass-surface backdrop-blur-xl p-6 rounded-lg border border-white/20 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
-            <div class="flex justify-between items-end">
-              <div>
-                <span class="text-primary-container font-label-caps bg-primary-container/10 px-3 py-1 rounded-full mb-2 inline-block">Latest Entry</span>
-                <h2 class="font-headline-lg text-white mb-1" id="home-recent-memo">최근 기록</h2>
-                <div class="flex items-center gap-2 text-on-surface-variant text-body-sm">
-                  <span class="material-symbols-outlined text-sm">location_on</span>
-                  <span id="home-recent-location">위치 정보</span>
+          <div class="absolute bottom-4 left-4 right-4 glass-surface backdrop-blur-xl p-4 rounded-lg border border-white/20 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+            <div class="flex justify-between items-end gap-2">
+              <div class="overflow-hidden">
+                <span class="text-primary-container font-label-caps bg-primary-container/10 px-2 py-0.5 rounded-full mb-1 inline-block text-xs">Latest Entry</span>
+                <h2 class="font-title-md text-white mb-1 truncate" id="home-recent-memo">최근 기록</h2>
+                <div class="flex items-center gap-1 text-on-surface-variant text-xs">
+                  <span class="material-symbols-outlined text-[14px]">location_on</span>
+                  <span id="home-recent-location" class="truncate">위치 정보</span>
                 </div>
               </div>
-              <span class="text-on-surface-variant font-label-caps" id="home-recent-date">날짜</span>
+              <span class="text-on-surface-variant font-label-caps text-xs whitespace-nowrap" id="home-recent-date">날짜</span>
             </div>
           </div>
         </section>
@@ -138,8 +138,8 @@
     <div class="view-container" id="view-timeline">
       <div class="grid grid-cols-4 md:grid-cols-12 gap-grid-gutter">
 
-        <!-- Upload Card (screen7: Full Width) -->
-        <section class="col-span-4 md:col-span-12 bento-card glass-surface glass-edge rounded-lg p-card-padding relative overflow-hidden group" id="upload-area">
+        <!-- Upload Card (Hidden by default since upload moved to bottom nav) -->
+        <section class="col-span-4 md:col-span-12 hidden bento-card glass-surface glass-edge rounded-lg p-card-padding relative overflow-hidden group" id="upload-area">
           <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6" id="upload-content">
             <div>
               <h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg mb-2">추억의 순간을 업로드하세요</h2>
@@ -268,10 +268,11 @@
     </div>
 
     <!-- ══════════════ MAP VIEW (screen8 - Immersive Dark Map) ══════════════ -->
-    <div class="view-container" id="view-map">
-      <div id="map-container"></div>
+    <div class="view-container relative h-[100dvh] overflow-hidden" id="view-map">
+      <div id="map-container" class="absolute inset-0 z-0"></div>
       <!-- Floating Bento Overlay (screen8 style) -->
-      <div class="grid grid-cols-4 gap-4 mt-4 max-w-5xl mx-auto w-full">
+      <div class="absolute bottom-24 left-0 w-full px-6 z-20 pointer-events-none">
+        <div class="grid grid-cols-4 gap-4 max-w-5xl mx-auto w-full pointer-events-auto">
         <!-- Stats Card -->
         <div class="col-span-2 glass-surface p-card-padding rounded-xl glass-edge flex flex-col justify-between shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
           <div>
@@ -296,7 +297,7 @@
   </main>
 
   <!-- ══════════════ Bottom Navigation Bar (from STITCH screen7) ══════════════ -->
-  <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-6 pt-2 bg-white/5 backdrop-blur-xl border-t border-white/10 glass-edge shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
+  <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-2 pt-2 bg-white/5 backdrop-blur-xl border-t border-white/10 glass-edge shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
     <!-- Home -->
     <a class="nav-item flex flex-col items-center justify-center p-3 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-home" data-view="home">
       <span class="material-symbols-outlined">home</span>
