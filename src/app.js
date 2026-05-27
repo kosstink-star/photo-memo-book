@@ -5,7 +5,7 @@
  */
 import './style.css';
 import heic2any from 'heic2any';
-import html2canvas from 'html2canvas';
+import * as htmlToImage from 'html-to-image';
 import { extractExif, createThumbnail } from './exifParser.js';
 import { savePhoto, getAllPhotos, deletePhoto, getPhotoCount } from './storage.js';
 import { initMap, refreshMap, renderMarkers } from './map.js';
@@ -842,18 +842,16 @@ function initEventListeners() {
         // 렌더링 타겟
         const targetElement = photoModal.querySelector('.max-w-3xl');
         
-        const canvas = await html2canvas(targetElement, {
+        const canvasDataUrl = await htmlToImage.toPng(targetElement, {
           backgroundColor: '#0d1117',
-          scale: 2,
-          useCORS: true,
+          pixelRatio: 2,
         });
         
         if (controls) controls.style.display = 'flex';
 
-        const image = canvas.toDataURL('image/png', 1.0);
         const link = document.createElement('a');
         link.download = `memoirs_${Date.now()}.png`;
-        link.href = image;
+        link.href = canvasDataUrl;
         link.click();
         
         showToast('이미지가 성공적으로 저장되었습니다.');
