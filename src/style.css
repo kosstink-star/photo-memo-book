@@ -235,15 +235,46 @@ body {
   color: #00f0ff !important;
 }
 
-/* ── Custom Leaflet Marker (Cyan Dot) ── */
-.custom-marker {
-  width: 16px !important;
-  height: 16px !important;
-  background: #00f0ff;
+/* ── Custom Leaflet Marker (Thumbnail) ── */
+.thumbnail-marker {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+.thumbnail-img {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
-  animation: pulse-glow 2s infinite ease-in-out;
-  border: none;
+  object-fit: cover;
+  border: 2px solid #00f0ff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+  transition: transform 0.2s ease;
+}
+.thumbnail-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: 2px solid rgba(0, 240, 255, 0.5);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse-ring 2s infinite ease-out;
+  z-index: 1;
+}
+.thumbnail-marker:hover .thumbnail-img {
+  transform: scale(1.15);
+  border-color: #fff;
+}
+@keyframes pulse-ring {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
 }
 
 /* ── Hashtag ── */
@@ -405,3 +436,4 @@ body { scrollbar-width: none; }
 .hidden {
   display: none !important;
 }
+.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } 

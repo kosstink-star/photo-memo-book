@@ -20,14 +20,14 @@ export function initMap(containerId) {
   }
 
   mapInstance = L.map(containerId, {
-    zoomControl: true,
-    attributionControl: true,
+    zoomControl: false, // 커스텀 디자인을 위해 기본 줌 컨트롤 숨김
+    attributionControl: false, // 화면 깔끔하게 유지
   }).setView([37.5665, 126.9780], 6); // 서울 중심, 한국 전체 보이는 줌
 
-  // 밝은 색상 OpenStreetMap 타일 (CSP 호환)
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  // 다크 테마 CartoDB Dark Matter 타일
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    subdomains: 'abcd',
   }).addTo(mapInstance);
 
   markersLayer = L.markerClusterGroup({
@@ -80,13 +80,20 @@ export function renderMarkers(photos) {
       </div>
     `;
 
-    // Liquid Bento 커스텀 마커 아이콘 (Cyan Glow)
+    // 썸네일을 포함한 고급 커스텀 마커
+    const markerHtml = `
+      <div class="thumbnail-marker group">
+        <img src="${photo.thumbnailDataUrl}" class="thumbnail-img" alt="marker"/>
+        <div class="thumbnail-ring"></div>
+      </div>
+    `;
+
     const markerIcon = L.divIcon({
-      className: 'custom-marker', // style.css에 정의된 .custom-marker 클래스 활용
-      html: '', // 내용은 CSS에서 크기와 색상을 지정
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
-      popupAnchor: [0, -12],
+      className: 'bg-transparent border-none', // 배경/보더 제거
+      html: markerHtml,
+      iconSize: [40, 40],
+      iconAnchor: [20, 40], // 핀의 뾰족한 부분이 바닥 중앙
+      popupAnchor: [0, -42],
     });
 
     L.marker([photo.lat, photo.lng], { icon: markerIcon })

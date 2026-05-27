@@ -269,11 +269,14 @@
     <!-- ══════════════ MAP VIEW (screen8 - Immersive Dark Map) ══════════════ -->
     <div class="view-container fixed inset-0 z-0 bg-[#0d1117]" id="view-map">
       <div id="map-container" class="absolute inset-0 z-0"></div>
+      <!-- Top Gradient to protect Header -->
+      <div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#0d1117]/90 to-transparent z-10 pointer-events-none"></div>
+      
       <!-- Floating Bento Overlay (screen8 style) -->
       <div class="absolute bottom-28 md:bottom-24 left-0 w-full px-6 z-20 pointer-events-none">
-        <div class="grid grid-cols-4 gap-4 max-w-5xl mx-auto w-full pointer-events-auto">
+        <div class="flex flex-row gap-4 max-w-5xl mx-auto w-full overflow-x-auto pb-4 snap-x pointer-events-auto hide-scrollbar">
         <!-- Stats Card -->
-        <div class="col-span-2 glass-surface p-card-padding rounded-xl glass-edge flex flex-col justify-between shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+        <div class="flex-shrink-0 w-40 md:w-48 glass-surface p-card-padding rounded-[24px] glass-edge flex flex-col justify-between shadow-[0_8px_32px_rgba(0,0,0,0.6)] snap-center bg-[#0d1117]/60 backdrop-blur-xl border border-white/10">
           <div>
             <h2 class="text-label-caps font-label-caps text-primary-container/80 tracking-[0.2em] mb-1">촬영 위치</h2>
             <p class="text-headline-lg-mobile font-headline-lg-mobile text-white" id="map-location-count">0개의 장소</p>
@@ -284,10 +287,10 @@
           </div>
         </div>
         <!-- Highlight Photo -->
-        <div class="col-span-2 glass-surface p-2 rounded-xl glass-edge relative group cursor-pointer overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.4)]" id="map-highlight-card" style="display:none;">
-          <img class="w-full h-32 object-cover rounded-lg group-hover:scale-110 transition-transform duration-700" id="map-highlight-img" alt="하이라이트" src="" />
-          <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
-            <p class="text-body-sm font-body-sm text-white font-medium" id="map-highlight-memo">최근 본 하이라이트</p>
+        <div class="flex-shrink-0 w-40 md:w-48 h-40 md:h-48 glass-surface p-1.5 rounded-[24px] glass-edge relative group cursor-pointer overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.6)] snap-center bg-[#0d1117]/60 backdrop-blur-xl border border-white/10" id="map-highlight-card" style="display:none;">
+          <img class="w-full h-full object-cover rounded-[18px] group-hover:scale-110 transition-transform duration-700" id="map-highlight-img" alt="하이라이트" src="" />
+          <div class="absolute inset-1.5 rounded-[18px] bg-gradient-to-t from-[#0d1117]/80 via-transparent to-transparent flex items-end p-4">
+            <p class="text-body-sm font-body-sm text-white font-medium" id="map-highlight-memo">최근 촬영</p>
           </div>
         </div>
       </div>
