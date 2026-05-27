@@ -1,6 +1,10 @@
 import { defineConfig } from 'vite';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+  plugins: [
+    tailwindcss(),
+  ],
   // GitHub Pages 배포 시 하위 경로 설정
   base: '/photo-memo-book/',
   build: {

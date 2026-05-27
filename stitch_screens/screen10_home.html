@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Memoirs - Your Digital Legacy</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0c1324;
+            color: #dce1fb;
+            overflow-x: hidden;
+        }
+
+        .glass-surface {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-edge {
+            shadow-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .liquid-blob {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.15;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .blob-1 {
+            background: #00f0ff;
+            top: -100px;
+            left: -100px;
+            animation: move 20s infinite alternate;
+        }
+
+        .blob-2 {
+            background: #571bc1;
+            bottom: -150px;
+            right: -100px;
+            animation: move 25s infinite alternate-reverse;
+        }
+
+        @keyframes move {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(100px, 150px) scale(1.2); }
+        }
+
+        .bento-grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(12, 1fr);
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .cyan-glow {
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
+        }
+
+        .inner-glow-border {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#23293c",
+                        "on-primary-fixed-variant": "#004f54",
+                        "error-container": "#93000a",
+                        "on-background": "#dce1fb",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "on-tertiary": "#472a00",
+                        "on-primary-fixed": "#002022",
+                        "primary-fixed": "#7df4ff",
+                        "on-primary-container": "#006970",
+                        "inverse-surface": "#dce1fb",
+                        "inverse-primary": "#006970",
+                        "outline": "#849495",
+                        "surface-container-highest": "#2e3447",
+                        "on-secondary-fixed": "#23005c",
+                        "tertiary": "#fff3ea",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-tertiary-container": "#855300",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "primary-container": "#00f0ff",
+                        "tertiary-fixed": "#ffddb8",
+                        "surface-bright": "#33394c",
+                        "secondary": "#d0bcff",
+                        "surface": "#0c1324",
+                        "surface-container": "#191f31",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "background": "#0c1324",
+                        "surface-variant": "#2e3447",
+                        "outline-variant": "#3b494b",
+                        "on-secondary-container": "#c4abff",
+                        "secondary-container": "#571bc1",
+                        "on-primary": "#00363a",
+                        "surface-container-lowest": "#070d1f",
+                        "surface-container-low": "#151b2d",
+                        "on-surface": "#dce1fb",
+                        "on-secondary": "#3c0091",
+                        "error": "#ffb4ab",
+                        "secondary-fixed": "#e9ddff",
+                        "surface-tint": "#00dbe9",
+                        "inverse-on-surface": "#2a3043",
+                        "primary": "#dbfcff",
+                        "tertiary-container": "#ffd19c",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "on-surface-variant": "#b9cacb",
+                        "on-error": "#690005",
+                        "surface-dim": "#0c1324",
+                        "primary-fixed-dim": "#00dbe9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max-width": "1440px",
+                        "stack-gap": "1rem",
+                        "card-padding": "2rem",
+                        "grid-margin": "2rem",
+                        "grid-gutter": "1.5rem"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "title-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "title-md": ["20px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-lg">
+<div class="liquid-blob blob-1"></div>
+<div class="liquid-blob blob-2"></div>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-grid-margin h-16 backdrop-blur-24 border-b border-white/10 bg-white/5 dark:bg-white/5 shadow-[0_0_30px_rgba(0,240,255,0.05)]">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-white/20">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A close-up professional portrait of a smiling young man with clean-shaven face and short hair, set against a soft bokeh background. The lighting is warm and cinematic, emphasizing high-fidelity details and a premium, friendly aesthetic. The overall color palette is muted and sophisticated, fitting a high-end personal archive application's user interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDv6tcan2Qi9MenmZFOX2Tbx5Ye3KzvOcbtX7cYqVYFne-NCQYRP74qVbRe5aaKWG1ROt18Hr-87sAB6TwiyKtoM8OmX1fJLfeqrTHjUsoCdpwNZzIYGZR5BtK0cRtJJOm1WVRpg0famQGRyQsCr_6mjH2yEEdT9UJyC70Z0fbPv6yp3UES7yOSpBhcK40Qyddb5aO-9It-2e8F0LF51KvwTyAwSbgLRjDQQihtfDQC9s1E239bR_zmh9H7_C7TZOuzlNakDWSwLDY-"/>
+</div>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold tracking-tight text-primary dark:text-primary-fixed-dim">Memoirs</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary dark:text-primary-fixed-dim hover:bg-white/10 transition-colors p-2 rounded-full active:scale-95 duration-200" data-icon="search">search</button>
+</div>
+</header>
+<main class="pt-24 pb-32 px-grid-margin max-w-container-max-width mx-auto">
+<!-- Bento Grid Layout -->
+<div class="bento-grid">
+<!-- Hero Welcome Card -->
+<section class="col-span-12 md:col-span-8 glass-surface rounded-lg p-card-padding flex flex-col justify-between relative overflow-hidden cyan-glow">
+<div class="relative z-10">
+<h1 class="font-display-lg text-display-lg text-primary mb-2 hidden md:block">Welcome home, Alex.</h1>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary mb-2 md:hidden">Welcome home, Alex.</h1>
+<p class="text-on-surface-variant font-body-lg max-w-md">Your life's journey is safely stored. Take a moment to revisit some of your favorite chapters.</p>
+</div>
+<div class="mt-8 flex items-baseline gap-2 relative z-10">
+<span class="text-primary font-display-lg text-display-lg leading-none">1,240</span>
+<span class="text-on-surface-variant font-label-caps uppercase tracking-widest">memories saved</span>
+</div>
+<!-- Decorative element -->
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+</section>
+<!-- Quick Action Card -->
+<section class="col-span-12 md:col-span-4 glass-surface rounded-lg p-card-padding flex flex-col items-center justify-center text-center gap-4 group cursor-pointer hover:bg-white/10 transition-all duration-300">
+<div class="w-16 h-16 rounded-full bg-primary-container/20 flex items-center justify-center cyan-glow group-hover:scale-110 transition-transform duration-300">
+<span class="material-symbols-outlined text-primary-container text-4xl" data-icon="cloud_upload">cloud_upload</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-primary">Upload Photo</h3>
+<p class="text-on-surface-variant text-body-sm mt-1">Add a new chapter to your story</p>
+</div>
+</section>
+<!-- Recent Memory Card (Large) -->
+<section class="col-span-12 md:col-span-7 glass-surface rounded-lg overflow-hidden relative min-h-[400px] group">
+<img alt="Recent Memory" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A breathtaking wide-angle shot of a serene mountain lake at sunset, reflecting the vibrant oranges and purples of the sky. In the foreground, a misty pine forest adds depth and mystery. The lighting is ethereal and atmospheric, perfectly capturing a moment of tranquility. The aesthetic is high-definition, premium nature photography that evokes nostalgia and wonder, consistent with a luxury digital memoir." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGdd3QzMy6Y-NSSTwRV00MyymCIYEKBNQGDik-DZAG8w3yitGZYOHcx7LoTR6FnklwgFvnyGdSOQcZRjZf5UqV532W8Uhm_7PQCl-T3TLX5BXYRN56VAoSoCzF4rBsT0hC5aBkLcfMlOEejSH0h60nOqGaOOW2F-dBraWn5IJ0OAlVldRoVG1Y6nzsbh6S7cAwkiU1E39-Gu9xmXDslfORbKwbwDPP1LpkQjCOsSHaJUnrs1JrJOBZNASUHN793xabz6JhXamcC4rB"/>
+<div class="absolute bottom-6 left-6 right-6 glass-surface backdrop-blur-xl p-6 rounded-lg border border-white/20 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+<div class="flex justify-between items-end">
+<div>
+<span class="text-primary-container font-label-caps bg-primary-container/10 px-3 py-1 rounded-full mb-2 inline-block">Latest Entry</span>
+<h2 class="font-headline-lg text-white mb-1">Mirror Lake Serenity</h2>
+<div class="flex items-center gap-2 text-on-surface-variant text-body-sm">
+<span class="material-symbols-outlined text-sm" data-icon="location_on">location_on</span>
+<span>Banff National Park, Canada</span>
+</div>
+</div>
+<span class="text-on-surface-variant font-label-caps">OCT 24, 2023</span>
+</div>
+</div>
+</section>
+<!-- Statistics/Insights Card -->
+<section class="col-span-12 md:col-span-5 glass-surface rounded-lg p-card-padding flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-title-md text-title-md text-primary">Weekly Pulse</h3>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="insights">insights</span>
+</div>
+<div class="flex items-end justify-between h-32 gap-2">
+<div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[40%]" title="Mon: 12"></div>
+<div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[65%]" title="Tue: 18"></div>
+<div class="flex-1 bg-primary/30 rounded-t-md hover:bg-primary/50 transition-colors h-[90%] relative">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-primary font-label-caps">24</div>
+</div>
+<div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[55%]" title="Thu: 15"></div>
+<div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[75%]" title="Fri: 20"></div>
+<div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[45%]" title="Sat: 13"></div>
+<div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[30%]" title="Sun: 8"></div>
+</div>
+</div>
+<div class="mt-6 flex justify-between items-center text-body-sm text-on-surface-variant">
+<span>Active streak: 12 days</span>
+<button class="text-primary hover:underline font-medium">Full Stats</button>
+</div>
+</section>
+<!-- Daily Recommendation Card -->
+<section class="col-span-12 glass-surface rounded-lg p-card-padding flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+<div class="w-full md:w-1/3 aspect-square md:aspect-video rounded-lg overflow-hidden border border-white/10 group">
+<img alt="Flashback" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="A candid, golden-hour photograph of friends laughing around a rustic outdoor table in Tuscany. The warm, low-angled sunlight creates long shadows and a nostalgic, dreamy glow. The scene is rich with textures—terracotta, aged wood, and lush green vineyards in the background. It feels like a genuine, high-fidelity personal memory captured with a professional lens." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsHD9ulfMTOY98qQ-brLfL6drnmjI3Y2lxQWgoiVgX4E9oV-tGhduNuvyAugTYsuqAyyCxdmdu69O62j5Cgj5ZSD2AYYRyJVnoXNdRPigZeZnIJTJWSNYpkeVe4Eq7_BAxAVGHI2oonyaaJlJv1zXShjdta1iI0caz0b978x69oY4hOB7nMl0t1UQFfPEoe9_pm8Nqr_4fWk1ToIP78QiaOnEbMyeboTTjmezxXYjqJfJ837rlAA5dktlAexwZybIdL-i9iU8nc3m1"/>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2 text-secondary font-label-caps mb-3">
+<span class="material-symbols-outlined text-lg" data-icon="auto_awesome">auto_awesome</span>
+<span>One Year Ago Today</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-primary mb-4">Summer in Tuscany</h2>
+<p class="text-on-surface-variant font-body-lg mb-6 max-w-2xl">
+                        Remember the afternoon spent exploring the rolling hills of Val d'Orcia? You saved 14 photos from that day including the sunset at the vineyard.
+                    </p>
+<button class="bg-primary-container text-on-primary-container font-title-md px-8 py-3 rounded-full hover:brightness-110 transition-all active:scale-95 cyan-glow">Revisit Journey</button>
+</div>
+<div class="absolute -bottom-12 -right-12 w-48 h-48 bg-secondary/10 rounded-full blur-3xl"></div>
+</section>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-white/5 dark:bg-white/5 backdrop-blur-24 border-t border-white/10 rounded-t-lg shadow-[0_-4px_24px_rgba(0,0,0,0.5)]">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim bg-primary/10 rounded-xl px-4 py-1 shadow-[0_0_15px_rgba(0,240,255,0.2)] transition-all duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-caps text-label-caps mt-1">Home</span>
+</a>
+<!-- Timeline -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-label-caps text-label-caps mt-1">Timeline</span>
+</a>
+<!-- Map -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span class="font-label-caps text-label-caps mt-1">Map</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-caps text-label-caps mt-1">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for cards
+        document.querySelectorAll('.glass-surface').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Add a very subtle light follow effect
+                card.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 50%)`;
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.background = `rgba(255, 255, 255, 0.03)`;
+            });
+        });
+
+        // Initialize tooltips/stats highlights
+        const bars = document.querySelectorAll('.flex-1.bg-white\\/5, .flex-1.bg-primary\\/30');
+        bars.forEach(bar => {
+            bar.addEventListener('mouseenter', () => {
+                bar.classList.add('cyan-glow');
+            });
+            bar.addEventListener('mouseleave', () => {
+                bar.classList.remove('cyan-glow');
+            });
+        });
+    </script>
+</body></html>

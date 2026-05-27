@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            background-color: #0c1324;
+            color: #dce1fb;
+            overflow-x: hidden;
+        }
+        .parallax-bg {
+            transition: transform 0.1s ease-out;
+            will-change: transform;
+        }
+        .glass-surface {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+        }
+        .glass-edge {
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
+        }
+        .liquid-blob {
+            position: fixed;
+            z-index: -1;
+            filter: blur(100px);
+            opacity: 0.15;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-container": "#00f0ff",
+                    "on-error": "#690005",
+                    "secondary-fixed-dim": "#d0bcff",
+                    "on-primary-fixed-variant": "#004f54",
+                    "on-secondary-fixed-variant": "#5516be",
+                    "surface-container-lowest": "#070d1f",
+                    "on-tertiary": "#472a00",
+                    "on-secondary-container": "#c4abff",
+                    "surface-tint": "#00dbe9",
+                    "surface-container-high": "#23293c",
+                    "on-tertiary-fixed-variant": "#653e00",
+                    "primary-fixed": "#7df4ff",
+                    "tertiary-fixed-dim": "#ffb95f",
+                    "on-error-container": "#ffdad6",
+                    "surface-container-low": "#151b2d",
+                    "surface-bright": "#33394c",
+                    "surface-container": "#191f31",
+                    "on-primary": "#00363a",
+                    "surface-variant": "#2e3447",
+                    "secondary-fixed": "#e9ddff",
+                    "inverse-primary": "#006970",
+                    "primary": "#dbfcff",
+                    "on-primary-container": "#006970",
+                    "surface": "#0c1324",
+                    "tertiary-fixed": "#ffddb8",
+                    "surface-dim": "#0c1324",
+                    "error-container": "#93000a",
+                    "tertiary": "#fff3ea",
+                    "outline-variant": "#3b494b",
+                    "on-surface": "#dce1fb",
+                    "surface-container-highest": "#2e3447",
+                    "secondary-container": "#571bc1",
+                    "on-surface-variant": "#b9cacb",
+                    "on-background": "#dce1fb",
+                    "tertiary-container": "#ffd19c",
+                    "secondary": "#d0bcff",
+                    "primary-fixed-dim": "#00dbe9",
+                    "on-secondary-fixed": "#23005c",
+                    "on-primary-fixed": "#002022",
+                    "outline": "#849495",
+                    "on-secondary": "#3c0091",
+                    "background": "#0c1324",
+                    "error": "#ffb4ab",
+                    "inverse-on-surface": "#2a3043",
+                    "on-tertiary-container": "#855300",
+                    "on-tertiary-fixed": "#2a1700",
+                    "inverse-surface": "#dce1fb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "grid-gutter": "1.5rem",
+                    "container-max-width": "1440px",
+                    "grid-margin": "2rem",
+                    "card-padding": "2rem",
+                    "stack-gap": "1rem"
+            },
+            "fontFamily": {
+                    "title-md": ["Plus Jakarta Sans"],
+                    "label-caps": ["Inter"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "body-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "title-md": ["20px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                    "label-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "body-lg": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface selection:bg-primary-container/30">
+<!-- Atmospheric Liquid Gradients -->
+<div class="liquid-blob bg-primary-container w-[500px] h-[500px] -top-48 -left-48"></div>
+<div class="liquid-blob bg-secondary-container w-[400px] h-[400px] top-1/2 -right-24"></div>
+<!-- Header Navigation -->
+<nav class="fixed top-0 w-full z-50 flex justify-between items-center px-grid-margin py-4 bg-white/5 backdrop-blur-xl border-b border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+<button aria-label="Back" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Memos</span>
+<button aria-label="Search" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary">search</span>
+</button>
+</nav>
+<!-- Parallax Hero -->
+<header class="relative w-full h-[530px] overflow-hidden">
+<img class="parallax-bg absolute inset-0 w-full h-[120%] object-cover object-center scale-110" data-alt="A breathtaking cinematic landscape of Yosemite Valley at dawn, featuring the iconic El Capitan and Half Dome shrouded in soft morning mist. The lighting is ethereal with cool blue tones and golden highlights on the peaks, perfectly matching a premium glassmorphic UI. The image captures the immense scale and serene majesty of the granite cliffs reflected in a calm river." id="parallaxHero" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkMMgoI0NCk-J8c82a9OGX9EaCxAtrIZ1xZGAsTbCNk-GArPLV-KihQb7grgby8l4ggfXWrlI5mVv18wueaR2E692vrja_w11rBjTlFOjJHdp1ymnGQ6gbH81SwPgoEPyPlYn5_DpvXgZzs-MazG6ncMRCsAt-qOxeAR4pdB0ffwE0UKqGPvIRYA3zOfx6i2CewkRRZhSCNq2JWmfaal09O83xywkDcpOEnOMb7mMN33QlhICB-MDSA06hKq7nQQIgF5U3mEYK-_4L"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
+<div class="absolute bottom-12 left-grid-margin right-grid-margin">
+<div class="inline-flex items-center px-4 py-2 rounded-full glass-surface glass-edge mb-4">
+<span class="material-symbols-outlined text-primary-container text-[18px] mr-2" style="font-variation-settings: 'FILL' 1;">mountain_flag</span>
+<span class="font-label-caps text-label-caps text-primary tracking-widest">ADVENTURE • 2024</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-white max-w-3xl">요세미티의 고요한 아침</h1>
+</div>
+</header>
+<main class="relative z-10 -mt-12 px-grid-margin pb-32 max-w-container-max-width mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-grid-gutter">
+<!-- Details Card (Bento Left) -->
+<div class="md:col-span-4 flex flex-col gap-grid-gutter">
+<div class="glass-surface glass-edge rounded-lg p-card-padding glow-cyan">
+<div class="flex flex-col gap-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container">calendar_today</span>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1">날짜</p>
+<p class="font-title-md text-title-md text-white">2024년 5월 12일</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container">schedule</span>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1">시간</p>
+<p class="font-title-md text-title-md text-white">오전 06:45</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container">location_on</span>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1">장소</p>
+<p class="font-title-md text-title-md text-white">Yosemite Valley, CA</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Interactive Map Widget -->
+<div class="glass-surface glass-edge rounded-lg overflow-hidden group h-64 relative cursor-pointer active:scale-[0.98] transition-all">
+<img class="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700" data-alt="A stylized overhead map view of Yosemite National Park valley, rendered in a dark aesthetic with glowing cyan path lines and minimalist topographical features. The map uses deep blues and dark greys to harmonize with the glassmorphism theme, with a prominent glowing marker indicating the specific memory location." data-location="Yosemite National Park" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDn-AhZg_vNadqAIjWADhFCQ0-Sefho2t8wNWo5-ap9O4WpvLkTqBNDtuWgeOjJduNL4RQMdQzlzgnoANo7X2ZtcI3V4f8Ra8hovXNlUHRXj_BHP1M5-8OB_vri0sHAM3oh59iM0YOEvq-GhPx__3ErKnGu6ifXZKn55-5d11qOcjNDPM38UbERNzCRDjmGWt7zq5yiqTuYrb2G3Jx_q6L5nrTMmMh-uUmkuoAbyoi-l7kaiLTeZNE_FsZGgc2RapqpylWcgYea8FZ9"/>
+<div class="absolute inset-0 bg-primary/10 group-hover:bg-transparent transition-colors"></div>
+<div class="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+<div class="glass-surface backdrop-blur-md border border-white/20 rounded-full px-4 py-2 flex items-center">
+<span class="material-symbols-outlined text-primary-container text-[16px] mr-2">explore</span>
+<span class="font-label-caps text-label-caps text-white">지도 보기</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center shadow-lg shadow-primary-container/40">
+<span class="material-symbols-outlined text-on-primary-fixed">near_me</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Memo Content (Bento Right/Main) -->
+<div class="md:col-span-8">
+<div class="glass-surface glass-edge rounded-lg p-card-padding h-full min-h-[400px]">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-primary-container">edit_note</span>
+<h2 class="font-headline-lg text-headline-lg text-white">생각 기록</h2>
+</div>
+<article class="space-y-6">
+<p class="font-body-lg text-body-lg text-on-surface leading-relaxed opacity-90">
+                            오늘 아침, 차가운 공기를 가르며 도착한 요세미티의 공기는 말로 표현할 수 없을 만큼 투명했다. 엘 캐피탄의 거대한 암벽이 새벽빛에 서서히 물드는 과정을 지켜보는 것은 마치 시간이 멈춘 듯한 경험이었다.
+                        </p>
+<p class="font-body-lg text-body-lg text-on-surface leading-relaxed opacity-90">
+                            카메라 셔터 소리조차 사치스럽게 느껴질 만큼 완벽한 정적. 이곳에서 나는 우리가 자연의 일부임을 다시 한번 실감했다. 밸리를 따라 흐르는 강물 소리가 배경 음악처럼 들리고, 가끔씩 들려오는 새소리가 아침의 시작을 알렸다.
+                        </p>
+<blockquote class="border-l-4 border-primary-container/40 pl-6 py-2 italic font-title-md text-primary/80">
+                            "가장 위대한 예술은 자연 그 자체이며, 우리는 단지 그 순간을 잠시 빌려오는 관객일 뿐이다."
+                        </blockquote>
+<p class="font-body-lg text-body-lg text-on-surface leading-relaxed opacity-90">
+                            내년 이맘때 다시 이곳에 서 있을 나의 모습을 상상하며, 오늘의 기억을 유리병에 담듯 이 메모장에 남겨본다. 빛과 공기, 그리고 그 순간의 감각까지 모두.
+                        </p>
+</article>
+<div class="mt-12 flex flex-wrap gap-3">
+<span class="px-4 py-2 rounded-full glass-surface border-primary-container/20 text-primary-container font-label-caps text-label-caps hover:bg-primary-container/10 cursor-pointer transition-colors">#TRAVEL</span>
+<span class="px-4 py-2 rounded-full glass-surface border-primary-container/20 text-primary-container font-label-caps text-label-caps hover:bg-primary-container/10 cursor-pointer transition-colors">#YOSEMITE</span>
+<span class="px-4 py-2 rounded-full glass-surface border-primary-container/20 text-primary-container font-label-caps text-label-caps hover:bg-primary-container/10 cursor-pointer transition-colors">#MORNING_CALM</span>
+<button class="w-10 h-10 rounded-full glass-surface flex items-center justify-center hover:bg-white/10 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Active: Timeline) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-white/5 backdrop-blur-2xl border-t border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 px-4 py-2 hover:bg-white/10 transition-all active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-caps text-label-caps mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary/20 dark:bg-primary-container/20 text-primary-container dark:text-primary-container rounded-xl px-4 py-2 shadow-[0_0_15px_rgba(0,240,255,0.2)] active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="font-label-caps text-label-caps mt-1">Timeline</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 px-4 py-2 hover:bg-white/10 transition-all active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="font-label-caps text-label-caps mt-1">Map</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 px-4 py-2 hover:bg-white/10 transition-all active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-caps text-label-caps mt-1">Profile</span>
+</a>
+</nav>
+<script>
+        // Parallax Effect
+        window.addEventListener('scroll', () => {
+            const scroll = window.pageYOffset;
+            const hero = document.getElementById('parallaxHero');
+            if (hero) {
+                hero.style.transform = `translateY(${scroll * 0.4}px) scale(1.1)`;
+            }
+        });
+
+        // Interactive blobs following mouse slightly
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            const blobs = document.querySelectorAll('.liquid-blob');
+            blobs.forEach((blob, index) => {
+                const shift = (index + 1) * 20;
+                blob.style.transform = `translate(${x * shift}px, ${y * shift}px)`;
+            });
+        });
+    </script>
+</body></html>
