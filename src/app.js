@@ -259,8 +259,8 @@ async function handleFileSelect(file) {
       }
 
       // 패널 표시
-      exifPanel.classList.add('active');
-      memoSection.classList.add('active');
+      exifPanel.style.display = 'block';
+      memoSection.style.display = 'block';
       memoTextarea.value = '';
       memoTextarea.focus();
     })
@@ -315,8 +315,8 @@ function resetUploadState() {
   currentFileBase64 = null;
   currentFileName = '';
   fileInput.value = '';
-  exifPanel.classList.remove('active');
-  memoSection.classList.remove('active');
+  exifPanel.style.display = 'none';
+  memoSection.style.display = 'none';
   exifPreview.classList.add('hidden');
   memoTextarea.value = '';
 }
@@ -387,25 +387,16 @@ async function renderTimeline() {
 
       return `
         <article class="memo-card fade-in" style="animation-delay:${idx * 0.06}s" data-id="${photo.id}">
-          <img class="memo-card-image" 
-               src="${photo.thumbnailDataUrl}" 
-               alt="${photo.fileName || '사진'}" 
-               loading="lazy" />
-          <div class="memo-card-tags">
-            ${dateStr ? `<span class="memo-card-tag tag-date">${dateStr}</span>` : ''}
-            ${locationStr ? `
-              <span class="memo-card-tag tag-location">
-                <span class="material-symbols-outlined">location_on</span>
-                ${locationStr}
-              </span>
-            ` : ''}
+          <div class="memo-img-wrapper">
+            <img src="${photo.thumbnailDataUrl}" alt="${photo.fileName || '사진'}" loading="lazy" />
+            <div class="memo-content">
+              ${dateStr ? `<p class="memo-date">${dateStr}</p>` : ''}
+              <h3 class="memo-text">${photo.memo || locationStr || '메모 없음'}</h3>
+            </div>
           </div>
-          <button class="memo-card-delete" title="삭제" data-delete-id="${photo.id}">
-            <span class="material-symbols-outlined">close</span>
+          <button class="memo-card-delete" title="삭제" data-delete-id="${photo.id}" style="position:absolute; top:8px; right:8px; z-index:10; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2); color:white; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(4px);">
+            <span class="material-symbols-outlined" style="font-size:16px;">close</span>
           </button>
-          <div class="memo-card-body">
-            <p class="memo-card-text">${photo.memo || '<span style="color:var(--color-outline);font-style:italic;">메모 없음</span>'}</p>
-          </div>
         </article>
       `;
     })
@@ -609,7 +600,9 @@ function initEventListeners() {
   navTimeline.addEventListener('click', () => switchView('timeline'));
   navMap.addEventListener('click', () => switchView('map'));
   navAdd.addEventListener('click', () => {
+    switchView('timeline');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Add 탭 클릭 시 업로드 버튼 누른 것과 동일하게 동작
     fileInput.click();
   });
 

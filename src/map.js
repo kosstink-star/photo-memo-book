@@ -24,9 +24,10 @@ export function initMap(containerId) {
     attributionControl: true,
   }).setView([37.5665, 126.9780], 6); // 서울 중심, 한국 전체 보이는 줌
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  // 다크 모드용 CartoDB DarkMatter 타일
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
   }).addTo(mapInstance);
 
   markersLayer = L.markerClusterGroup({
@@ -68,33 +69,24 @@ export function renderMarkers(photos) {
       : '날짜 미상';
 
     const popupContent = `
-      <div style="max-width:220px;font-family:'Noto Sans KR','Plus Jakarta Sans',sans-serif;">
+      <div style="max-width:220px;font-family:'Inter',sans-serif;">
         <img src="${photo.thumbnailDataUrl}" 
              style="width:100%;border-radius:12px;margin-bottom:8px;object-fit:cover;max-height:150px;" 
              alt="${photo.fileName || '사진'}" />
-        <p style="font-size:12px;color:#87726e;margin:0 0 4px;">${dateStr}</p>
-        <p style="font-size:14px;color:#1c1c19;margin:0;line-height:1.5;">
-          ${photo.memo || '<span style="color:#87726e;">메모 없음</span>'}
+        <p style="font-size:12px;color:rgba(255,255,255,0.7);margin:0 0 4px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;">${dateStr}</p>
+        <p style="font-size:14px;color:#fff;margin:0;line-height:1.5;font-weight:500;">
+          ${photo.memo || '<span style="color:rgba(255,255,255,0.5);">메모 없음</span>'}
         </p>
       </div>
     `;
 
-    // 커스텀 마커 아이콘
+    // Liquid Bento 커스텀 마커 아이콘 (Cyan Glow)
     const markerIcon = L.divIcon({
-      className: 'custom-marker',
-      html: `<div style="
-        width:36px;height:36px;
-        background:linear-gradient(135deg,#964735,#d97b66);
-        border:3px solid #fff;
-        border-radius:50%;
-        box-shadow:0 2px 8px rgba(150,71,53,0.4);
-        display:flex;align-items:center;justify-content:center;
-      "><svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 24 24'>
-        <path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/>
-      </svg></div>`,
-      iconSize: [36, 36],
-      iconAnchor: [18, 36],
-      popupAnchor: [0, -36],
+      className: 'custom-marker', // style.css에 정의된 .custom-marker 클래스 활용
+      html: '', // 내용은 CSS에서 크기와 색상을 지정
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+      popupAnchor: [0, -12],
     });
 
     L.marker([photo.lat, photo.lng], { icon: markerIcon })
