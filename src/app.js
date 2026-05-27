@@ -5,6 +5,7 @@
  */
 import './style.css';
 import heic2any from 'heic2any';
+import html2canvas from 'html2canvas';
 import { extractExif, createThumbnail } from './exifParser.js';
 import { savePhoto, getAllPhotos, deletePhoto, getPhotoCount } from './storage.js';
 import { initMap, refreshMap, renderMarkers } from './map.js';
@@ -834,8 +835,6 @@ function initEventListeners() {
   if (photoModalExport) {
     photoModalExport.addEventListener('click', async () => {
       try {
-        const html2canvas = (await import('html2canvas')).default;
-        
         // 일시적으로 수정 관련 버튼 숨기기
         const controls = photoModal.querySelector('.absolute.top-4.right-4.z-10');
         if (controls) controls.style.display = 'none';

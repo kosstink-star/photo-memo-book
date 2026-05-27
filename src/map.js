@@ -98,9 +98,13 @@ export function renderMarkers(photos) {
   });
 
   // 모든 마커가 보이도록 지도 범위 조정
-  if (validPhotos.length > 0) {
-    const bounds = L.latLngBounds(validPhotos.map((p) => [p.lat, p.lng]));
-    mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+  if (validPhotos.length === 1) {
+    mapInstance.setView([validPhotos[0].lat, validPhotos[0].lng], 14);
+  } else if (validPhotos.length > 1) {
+    const bounds = markersLayer.getBounds();
+    if (bounds && bounds.isValid()) {
+      mapInstance.fitBounds(bounds, { padding: [50, 50] });
+    }
   }
 }
 
