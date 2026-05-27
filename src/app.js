@@ -846,7 +846,6 @@ function initEventListeners() {
           backgroundColor: '#0d1117',
           scale: 2,
           useCORS: true,
-          allowTaint: true,
         });
         
         if (controls) controls.style.display = 'flex';
@@ -860,7 +859,7 @@ function initEventListeners() {
         showToast('이미지가 성공적으로 저장되었습니다.');
       } catch (err) {
         console.error('html2canvas error', err);
-        showToast('이미지 저장 중 오류가 발생했습니다.');
+        showToast('이미지 저장 중 오류가 발생했습니다: ' + err.message);
         const controls = photoModal.querySelector('.absolute.top-4.right-4.z-10');
         if (controls) controls.style.display = 'flex';
       }
