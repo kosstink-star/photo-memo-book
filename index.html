@@ -9,8 +9,8 @@
     script-src 'self';
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com;
-    img-src 'self' blob: data: https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com;
-    connect-src 'self' https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com https://api.bigdatacloud.net https://nominatim.openstreetmap.org https://api.allorigins.win;
+    img-src 'self' blob: data: https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com https://server.arcgisonline.com;
+    connect-src 'self' https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.bigdatacloud.net https://nominatim.openstreetmap.org https://api.allorigins.win;
     frame-src 'none';
     object-src 'none';
     base-uri 'self';
@@ -128,6 +128,23 @@
             <span id="home-stats-total">총 0개의 추억</span>
             <button class="text-primary hover:underline font-medium" id="home-goto-timeline">모두 보기</button>
           </div>
+        </section>
+
+        <!-- ══ On This Day Card (오늘의 추억) ══ -->
+        <section class="col-span-4 md:col-span-12 glass-surface rounded-lg p-card-padding relative overflow-hidden" id="home-onthisday-card" style="display:none;">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center">
+              <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">history</span>
+            </div>
+            <div>
+              <h3 class="font-title-md text-title-md text-secondary">오늘의 추억</h3>
+              <p class="text-body-sm text-on-surface-variant/70" id="home-onthisday-label">오늘과 같은 날의 기록</p>
+            </div>
+          </div>
+          <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar" id="home-onthisday-list">
+            <!-- Dynamically filled by JS -->
+          </div>
+          <div class="absolute top-0 right-0 w-48 h-48 bg-secondary/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
         </section>
 
       </div>
@@ -266,8 +283,52 @@
     <!-- ══════════════ MAP VIEW (screen8 - Immersive Dark Map) ══════════════ -->
     <div class="view-container fixed inset-0 z-0 bg-surface flex flex-col pt-16 pb-20" id="view-map">
       <div id="map-container" class="flex-1 relative z-0 border-b border-white/5 shadow-xl bg-[#e5e5e5]"></div>
+
+      <!-- ══ Map Quick Filter Chips (top overlay) ══ -->
+      <div class="absolute top-20 left-4 right-4 z-30 flex gap-2 overflow-x-auto hide-scrollbar pointer-events-auto" id="map-filter-chips">
+        <button class="map-filter-chip active" data-map-filter="all">전체</button>
+        <button class="map-filter-chip" data-map-filter="week">이번 주</button>
+        <button class="map-filter-chip" data-map-filter="month">이번 달</button>
+        <button class="map-filter-chip" data-map-filter="year">올해</button>
+      </div>
+
+      <!-- ══ Map Control Buttons (right side) ══ -->
+      <div class="absolute top-24 right-4 z-30 flex flex-col gap-3 pointer-events-auto">
+        <!-- Theme Switcher -->
+        <button class="map-control-fab" id="map-btn-theme" title="지도 테마 변경">
+          <span class="material-symbols-outlined text-lg">palette</span>
+        </button>
+        <!-- Journey Polyline Toggle -->
+        <button class="map-control-fab" id="map-btn-journey" title="여정 경로 표시">
+          <span class="material-symbols-outlined text-lg">timeline</span>
+        </button>
+        <!-- Heatmap Toggle -->
+        <button class="map-control-fab" id="map-btn-heatmap" title="히트맵 모드">
+          <span class="material-symbols-outlined text-lg">local_fire_department</span>
+        </button>
+      </div>
+
+      <!-- ══ Bottom Sheet (replaces popup) ══ -->
+      <div class="map-bottom-sheet" id="map-bottom-sheet">
+        <div class="map-bottom-sheet-handle"></div>
+        <div class="flex gap-4 items-start">
+          <img id="map-sheet-img" src="" alt="사진" class="w-28 h-28 rounded-xl object-cover flex-shrink-0 border border-white/10" />
+          <div class="flex-1 min-w-0">
+            <p class="font-label-caps text-label-caps text-primary-container/80 tracking-widest mb-1" id="map-sheet-date">날짜</p>
+            <h3 class="font-title-md text-title-md text-white mb-2 line-clamp-2" id="map-sheet-memo">메모</h3>
+            <div class="flex items-center gap-1 text-on-surface-variant text-body-sm">
+              <span class="material-symbols-outlined text-[14px]">location_on</span>
+              <span class="truncate" id="map-sheet-address">위치 정보</span>
+            </div>
+          </div>
+          <button class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 hover:bg-white/20 transition-colors" id="map-sheet-close">
+            <span class="material-symbols-outlined text-on-surface-variant text-sm">close</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Floating Bento Overlay (screen8 style) -->
-      <div class="h-64 flex-shrink-0 px-6 pt-4 pb-2 z-20">
+      <div class="h-48 flex-shrink-0 px-6 pt-4 pb-2 z-20">
         <div class="flex flex-row gap-4 max-w-5xl mx-auto w-full overflow-x-auto pb-4 snap-x pointer-events-auto hide-scrollbar">
         <!-- Stats Card -->
         <div class="flex-shrink-0 w-40 md:w-48 glass-surface p-card-padding rounded-[24px] glass-edge flex flex-col justify-between shadow-[0_8px_32px_rgba(0,0,0,0.6)] snap-center bg-[#0d1117]/60 backdrop-blur-xl border border-white/10">

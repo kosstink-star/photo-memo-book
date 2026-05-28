@@ -8,7 +8,7 @@ import heic2any from 'heic2any';
 import * as htmlToImage from 'html-to-image';
 import { extractExif, createThumbnail } from './exifParser.js';
 import { savePhoto, getAllPhotos, deletePhoto, getPhotoCount } from './storage.js';
-import { initMap, refreshMap, renderMarkers } from './map.js';
+import { initMap, refreshMap, renderMarkers, cycleMapTheme, toggleJourneyLine, toggleHeatmap, setMarkerClickCallback } from './map.js';
 
 // ──────────────────────────────────────
 // DOM References
@@ -104,6 +104,23 @@ const mapHighlightCard = document.getElementById('map-highlight-card');
 const mapHighlightImg = document.getElementById('map-highlight-img');
 const mapHighlightMemo = document.getElementById('map-highlight-memo');
 
+// 맵 컨트롤 요소
+const mapBtnTheme = document.getElementById('map-btn-theme');
+const mapBtnJourney = document.getElementById('map-btn-journey');
+const mapBtnHeatmap = document.getElementById('map-btn-heatmap');
+const mapFilterChips = document.getElementById('map-filter-chips');
+const mapBottomSheet = document.getElementById('map-bottom-sheet');
+const mapSheetImg = document.getElementById('map-sheet-img');
+const mapSheetDate = document.getElementById('map-sheet-date');
+const mapSheetMemo = document.getElementById('map-sheet-memo');
+const mapSheetAddress = document.getElementById('map-sheet-address');
+const mapSheetClose = document.getElementById('map-sheet-close');
+
+// 홈 뷰 '오늘의 추억' 요소
+const homeOnthisdayCard = document.getElementById('home-onthisday-card');
+const homeOnthisdayLabel = document.getElementById('home-onthisday-label');
+const homeOnthisdayList = document.getElementById('home-onthisday-list');
+
 // ──────────────────────────────────────
 // State
 // ──────────────────────────────────────
@@ -117,6 +134,7 @@ let currentFilter = 'all'; // 'all', 'week', 'month', 'year', 'location'
 let currentLocationFilter = '';
 let searchQuery = '';
 let currentEditingPhoto = null;
+let currentMapFilter = 'all'; // 지도 필터 상태
 
 // 해시태그 포맷팅 유틸리티
 function formatHashtags(text) {
@@ -304,7 +322,7 @@ async function handleFilesSelect(files) {
   renderTimeline();
   updateHomeView();
   if (currentView === 'map') {
-    getAllPhotos().then(renderMarkers);
+    refreshMapMarkers();
   }
 }
 
@@ -523,6 +541,94 @@ async function updateHomeView() {
       mapHighlightMemo.textContent = withGps[0].memo || withGps[0].address || '최근 촬영';
     }
   }
+
+  // '오늘의 추억' (오늘과 같은 날 N년 전 사진 검색)
+  updateOnThisDay(photos);
+}
+
+// ──────────────────────────────────────
+// On This Day (오늘의 추억)
+// ──────────────────────────────────────
+function updateOnThisDay(photos) {
+  if (!homeOnthisdayCard || !homeOnthisdayList) return;
+
+  const today = new Date();
+  const todayMonth = today.getMonth();
+  const todayDate = today.getDate();
+
+  // 오늘과 같은 월/일이지만 올해가 아닌 사진 찾기
+  const matches = photos.filter(p => {
+    if (!p.date) return false;
+    const d = new Date(p.date);
+    return d.getMonth() === todayMonth && d.getDate() === todayDate && d.getFullYear() !== today.getFullYear();
+  });
+
+  if (matches.length === 0) {
+    homeOnthisdayCard.style.display = 'none';
+    return;
+  }
+
+  // 날짜순 정렬 (오래된 순)
+  matches.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  homeOnthisdayCard.style.display = '';
+  homeOnthisdayLabel.textContent = `${matches.length}개의 추억이 오늘과 같은 날 기록되었습니다`;
+
+  homeOnthisdayList.innerHTML = matches.map(photo => {
+    const d = new Date(photo.date);
+    const yearsAgo = today.getFullYear() - d.getFullYear();
+    const yearLabel = yearsAgo === 1 ? '1년 전 오늘' : `${yearsAgo}년 전 오늘`;
+    const dateLabel = d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' });
+    return `
+      <div class="onthisday-photo" data-id="${photo.id}">
+        <img src="${photo.thumbnailDataUrl}" alt="${photo.fileName || '사진'}" loading="lazy" />
+        <div class="overlay">
+          <span class="years-ago">${yearLabel}</span>
+          <span>${dateLabel}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // 클릭 이벤트: 모달 열기
+  homeOnthisdayList.querySelectorAll('.onthisday-photo').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.id;
+      const photo = matches.find(p => p.id === id);
+      if (photo) openPhotoModal(photo);
+    });
+  });
+}
+
+// ──────────────────────────────────────
+// Map Filter Helper
+// ──────────────────────────────────────
+function getFilteredMapPhotos(photos) {
+  const now = new Date();
+  if (currentMapFilter === 'week') {
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return photos.filter(p => {
+      const d = p.date ? new Date(p.date) : new Date(p.createdAt);
+      return d >= oneWeekAgo && d <= now;
+    });
+  } else if (currentMapFilter === 'month') {
+    return photos.filter(p => {
+      const d = p.date ? new Date(p.date) : new Date(p.createdAt);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+  } else if (currentMapFilter === 'year') {
+    return photos.filter(p => {
+      const d = p.date ? new Date(p.date) : new Date(p.createdAt);
+      return d.getFullYear() === now.getFullYear();
+    });
+  }
+  return photos; // 'all'
+}
+
+async function refreshMapMarkers() {
+  const photos = await getAllPhotos();
+  const filtered = getFilteredMapPhotos(photos);
+  renderMarkers(filtered);
 }
 
 // ──────────────────────────────────────
@@ -717,10 +823,11 @@ function switchView(view) {
   if (view === 'map') {
     if (!mapInitialized) {
       initMap('map-container');
+      setMarkerClickCallback(openMapBottomSheet);
       mapInitialized = true;
     }
     refreshMap();
-    getAllPhotos().then(renderMarkers);
+    refreshMapMarkers();
   }
 }
 
@@ -747,6 +854,7 @@ document.addEventListener('click', (e) => {
 // Event Listeners
 // ──────────────────────────────────────
 function initEventListeners() {
+  // 해시태그 버튼
   if (btnAddHashtag) {
     btnAddHashtag.addEventListener('click', () => {
       const start = memoTextarea.selectionStart;
@@ -757,6 +865,67 @@ function initEventListeners() {
       memoTextarea.value = before + '#' + after;
       memoTextarea.focus();
       memoTextarea.selectionStart = memoTextarea.selectionEnd = start + 1;
+    });
+  }
+
+  // ══ Map Controls ══
+  // 테마 전환
+  if (mapBtnTheme) {
+    mapBtnTheme.addEventListener('click', () => {
+      const theme = cycleMapTheme();
+      const labels = { standard: '기본 지도', dark: '다크 지도', satellite: '위성 지도' };
+      showToast(`지도 테마: ${labels[theme] || theme}`);
+    });
+  }
+
+  // 여정 경로 토글
+  if (mapBtnJourney) {
+    mapBtnJourney.addEventListener('click', async () => {
+      const photos = await getAllPhotos();
+      const filtered = getFilteredMapPhotos(photos);
+      const shown = toggleJourneyLine(filtered);
+      mapBtnJourney.classList.toggle('active', shown);
+      showToast(shown ? '여정 경로가 표시됩니다' : '여정 경로가 숨겨졌습니다');
+    });
+  }
+
+  // 히트맵 토글
+  if (mapBtnHeatmap) {
+    mapBtnHeatmap.addEventListener('click', async () => {
+      const photos = await getAllPhotos();
+      const filtered = getFilteredMapPhotos(photos);
+      const shown = toggleHeatmap(filtered);
+      mapBtnHeatmap.classList.toggle('active', shown);
+      showToast(shown ? '히트맵 모드 활성화' : '히트맵 모드 비활성화');
+    });
+  }
+
+  // 지도 필터 칩
+  if (mapFilterChips) {
+    mapFilterChips.querySelectorAll('.map-filter-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        mapFilterChips.querySelectorAll('.map-filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentMapFilter = chip.dataset.mapFilter;
+        refreshMapMarkers();
+      });
+    });
+  }
+
+  // 바텀 시트 닫기
+  if (mapSheetClose) {
+    mapSheetClose.addEventListener('click', () => {
+      mapBottomSheet.classList.remove('active');
+    });
+  }
+
+  // 바텀 시트 사진 클릭 시 모달 열기
+  if (mapSheetImg) {
+    mapSheetImg.addEventListener('click', () => {
+      if (mapBottomSheet._currentPhoto) {
+        openPhotoModal(mapBottomSheet._currentPhoto);
+        mapBottomSheet.classList.remove('active');
+      }
     });
   }
 
@@ -930,7 +1099,7 @@ function initEventListeners() {
           await renderTimeline();
           await updateHomeView();
           if (currentView === 'map') {
-            getAllPhotos().then(renderMarkers);
+            refreshMapMarkers();
           }
         } catch (err) {
           console.error('Import failed', err);
@@ -1054,6 +1223,35 @@ function initEventListeners() {
 // ──────────────────────────────────────
 // Modal Helper (screen9 Parallax Style)
 // ──────────────────────────────────────
+// ──────────────────────────────────────
+// Map Bottom Sheet Helper
+// ──────────────────────────────────────
+function openMapBottomSheet(photo) {
+  if (!mapBottomSheet) return;
+
+  mapBottomSheet._currentPhoto = photo;
+
+  const dateStr = photo.date
+    ? new Date(photo.date).toLocaleDateString('ko-KR', {
+        year: 'numeric', month: 'long', day: 'numeric',
+      })
+    : '날짜 미상';
+
+  mapSheetImg.src = photo.thumbnailDataUrl;
+  mapSheetDate.textContent = dateStr;
+  mapSheetMemo.textContent = photo.memo || photo.fileName || '메모 없음';
+
+  if (photo.address) {
+    mapSheetAddress.textContent = photo.address;
+  } else if (photo.lat != null) {
+    mapSheetAddress.textContent = `${photo.lat.toFixed(4)}, ${photo.lng.toFixed(4)}`;
+  } else {
+    mapSheetAddress.textContent = '위치 정보 없음';
+  }
+
+  mapBottomSheet.classList.add('active');
+}
+
 function openPhotoModal(photo) {
   currentEditingPhoto = photo;
   exitPhotoModalEditMode();

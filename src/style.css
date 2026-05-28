@@ -437,3 +437,136 @@ body { scrollbar-width: none; }
   display: none !important;
 }
 .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } 
+
+/* ── Map Quick Filter Chips ── */
+.map-filter-chip {
+  white-space: nowrap;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  background: rgba(13, 17, 23, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(185, 202, 203, 0.9);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.map-filter-chip:hover {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: rgba(0, 240, 255, 0.4);
+}
+.map-filter-chip.active {
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  border-color: var(--color-primary-container);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+}
+
+/* ── Map Control FAB ── */
+.map-control-fab {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(13, 17, 23, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(185, 202, 203, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.map-control-fab:hover {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: rgba(0, 240, 255, 0.4);
+  transform: scale(1.08);
+}
+.map-control-fab.active {
+  background: rgba(0, 240, 255, 0.25);
+  border-color: var(--color-primary-container);
+  color: var(--color-primary-container);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
+}
+
+/* ── Map Bottom Sheet ── */
+.map-bottom-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: rgba(13, 17, 23, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px 24px 0 0;
+  padding: 12px 24px 24px;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+}
+.map-bottom-sheet.active {
+  transform: translateY(0);
+}
+.map-bottom-sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 auto 16px;
+}
+
+/* ── On This Day Card ── */
+.onthisday-photo {
+  flex-shrink: 0;
+  width: 140px;
+  height: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+.onthisday-photo:hover {
+  transform: translateY(-4px);
+}
+.onthisday-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.onthisday-photo .overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 10px;
+}
+.onthisday-photo .overlay span {
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.onthisday-photo .overlay .years-ago {
+  color: var(--color-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+/* ── Line Clamp Utility ── */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
