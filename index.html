@@ -176,11 +176,8 @@
                     </div>
                     <div class="flex-1">
                       <p class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1">날짜</p>
-                      <p class="font-title-md text-title-md text-white" id="exif-date">—</p>
-                      <!-- 수동 날짜 입력 (EXIF 없을 때 표시) -->
-                      <div class="hidden mt-2" id="manual-date-wrapper">
+                      <div class="mt-1" id="manual-date-wrapper">
                         <input type="date" id="manual-date" class="w-full bg-surface-container border border-white/20 rounded-lg px-3 py-2 text-on-surface text-body-sm focus:outline-none focus:border-primary-container/50" />
-                        <p class="text-[11px] text-on-surface-variant/50 mt-1">날짜가 추출되지 않았습니다. 직접 입력하세요.</p>
                       </div>
                     </div>
                   </div>
@@ -191,11 +188,8 @@
                     </div>
                     <div class="flex-1">
                       <p class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1">주소</p>
-                      <p class="font-title-md text-title-md text-white" id="exif-address">—</p>
-                      <!-- 수동 주소 입력 (EXIF 없을 때 표시) -->
-                      <div class="hidden mt-2" id="manual-address-wrapper">
+                      <div class="mt-1" id="manual-address-wrapper">
                         <input type="text" id="manual-address" placeholder="촬영 장소를 입력하세요" class="w-full bg-surface-container border border-white/20 rounded-lg px-3 py-2 text-on-surface text-body-sm placeholder-on-surface-variant/50 focus:outline-none focus:border-primary-container/50" />
-                        <p class="text-[11px] text-on-surface-variant/50 mt-1">위치 정보가 추출되지 않았습니다. 직접 입력하세요.</p>
                       </div>
                     </div>
                   </div>
@@ -218,6 +212,9 @@
                 <div class="flex items-center gap-3 mb-8">
                   <span class="material-symbols-outlined text-primary-container">edit_note</span>
                   <h2 class="font-headline-lg text-headline-lg text-white">메모 남기기</h2>
+                  <button id="btn-add-hashtag" class="ml-auto px-4 py-2 rounded-full bg-white/10 text-white text-sm hover:bg-white/20 flex items-center gap-1 transition-colors">
+                    <span class="font-bold">#</span> 해시태그 추가
+                  </button>
                 </div>
                 <textarea id="memo-textarea" placeholder="이 순간에 대한 메모를 남겨보세요..." maxlength="500"
                   class="w-full min-h-[200px] bg-transparent border border-white/10 rounded-lg p-6 text-on-surface text-body-lg placeholder-on-surface-variant/50 focus:outline-none focus:border-primary-container/50 resize-none transition-colors"></textarea>

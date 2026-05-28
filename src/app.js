@@ -21,6 +21,7 @@ const exifPanel = document.getElementById('exif-panel');
 const memoSection = document.getElementById('memo-section');
 const memoTextarea = document.getElementById('memo-textarea');
 const btnSave = document.getElementById('btn-save');
+const btnAddHashtag = document.getElementById('btn-add-hashtag');
 
 // 검색 요소
 const btnSearch = document.getElementById('btn-search');
@@ -46,9 +47,7 @@ const navTimeline = document.getElementById('nav-timeline');
 const navMap = document.getElementById('nav-map');
 const navAdd = document.getElementById('nav-add');
 
-// EXIF 표시 요소
-const exifDate = document.getElementById('exif-date');
-const exifAddress = document.getElementById('exif-address');
+// EXIF 표시 요소 (날짜와 주소는 수동입력으로 통합됨)
 const exifCoord = document.getElementById('exif-coord');
 const exifPreview = document.getElementById('exif-preview');
 
@@ -369,36 +368,34 @@ async function handleFileSelect(file) {
       exifPreview.src = thumbnail;
       exifPreview.classList.remove('hidden');
 
-      // EXIF 정보 표시
+      // EXIF 정보 표시 (항상 수동 입력 필드 사용)
       if (exifData.date) {
-        exifDate.textContent = formatDate(exifData.date);
-        exifDate.classList.remove('hidden');
-        manualDateWrapper.classList.add('hidden');
+        const d = new Date(exifData.date);
+        const offset = d.getTimezoneOffset() * 60000;
+        manualDateInput.value = (new Date(d - offset)).toISOString().slice(0,10);
       } else {
-        exifDate.classList.add('hidden');
-        manualDateWrapper.classList.remove('hidden');
-        manualDateInput.value = new Date().toISOString().split('T')[0]; // 기본값: 오늘
+        const d = new Date();
+        const offset = d.getTimezoneOffset() * 60000;
+        manualDateInput.value = (new Date(d - offset)).toISOString().split('T')[0];
       }
 
       if (exifData.lat != null && exifData.lng != null) {
         exifCoord.textContent = `${exifData.lat.toFixed(5)}, ${exifData.lng.toFixed(5)}`;
-        exifAddress.textContent = '주소를 불러오는 중...';
-        exifAddress.classList.remove('hidden');
-        manualAddressWrapper.classList.add('hidden');
+        manualAddressInput.value = '주소를 불러오는 중...';
 
         reverseGeocode(exifData.lat, exifData.lng).then(address => {
           if (address) {
             exifData.address = address;
-            exifAddress.textContent = address;
+            manualAddressInput.value = address;
           } else {
-            exifAddress.textContent = '주소를 찾을 수 없음';
+            manualAddressInput.value = '';
+            manualAddressInput.placeholder = '주소를 찾을 수 없음';
           }
         });
       } else {
         exifCoord.textContent = '정보 없음';
-        exifAddress.classList.add('hidden');
-        manualAddressWrapper.classList.remove('hidden');
         manualAddressInput.value = '';
+        manualAddressInput.placeholder = '촬영 장소를 입력하세요';
       }
 
       // 패널 표시
@@ -427,19 +424,14 @@ async function handleSave() {
   }
 
   try {
-    // 수동 입력값 적용
-    let finalDate = currentExifData?.date || null;
-    if (!finalDate && !manualDateWrapper.classList.contains('hidden')) {
-      const dateVal = manualDateInput.value;
-      if (dateVal) {
-        finalDate = new Date(dateVal).toISOString();
-      }
+    // 수동 입력값 적용 (항상 필드 값 사용)
+    let finalDate = null;
+    const dateVal = manualDateInput.value;
+    if (dateVal) {
+      finalDate = new Date(dateVal).toISOString();
     }
 
-    let finalAddress = currentExifData?.address || null;
-    if (!finalAddress && !manualAddressWrapper.classList.contains('hidden')) {
-      finalAddress = manualAddressInput.value.trim() || null;
-    }
+    let finalAddress = manualAddressInput.value.trim() || null;
 
     const photoData = {
       id: generateId(),
@@ -755,6 +747,19 @@ document.addEventListener('click', (e) => {
 // Event Listeners
 // ──────────────────────────────────────
 function initEventListeners() {
+  if (btnAddHashtag) {
+    btnAddHashtag.addEventListener('click', () => {
+      const start = memoTextarea.selectionStart;
+      const end = memoTextarea.selectionEnd;
+      const text = memoTextarea.value;
+      const before = text.substring(0, start);
+      const after = text.substring(end);
+      memoTextarea.value = before + '#' + after;
+      memoTextarea.focus();
+      memoTextarea.selectionStart = memoTextarea.selectionEnd = start + 1;
+    });
+  }
+
   // 검색 토글
   if (btnSearch) {
     btnSearch.addEventListener('click', () => {
