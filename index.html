@@ -10,7 +10,7 @@
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com;
     img-src 'self' blob: data: https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com https://server.arcgisonline.com;
-    connect-src 'self' https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.bigdatacloud.net https://nominatim.openstreetmap.org https://api.allorigins.win;
+    connect-src 'self' https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.bigdatacloud.net https://nominatim.openstreetmap.org https://api.allorigins.win https://archive-api.open-meteo.com https://api.open-meteo.com;
     frame-src 'none';
     object-src 'none';
     base-uri 'self';
@@ -105,7 +105,7 @@
           </div>
         </section>
 
-        <!-- Stats Card (screen10: col-span-5 / screen7: col-span-6) -->
+        <!-- Stats Card - 동적 월별 차트 -->
         <section class="col-span-4 md:col-span-5 glass-surface rounded-lg p-card-padding flex flex-col justify-between">
           <div>
             <div class="flex justify-between items-center mb-6">
@@ -113,20 +113,72 @@
               <span class="material-symbols-outlined text-on-surface-variant">insights</span>
             </div>
             <div class="flex items-end justify-between h-32 gap-2" id="home-stats-bars">
-              <div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[40%]"></div>
-              <div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[65%]"></div>
-              <div class="flex-1 bg-primary/30 rounded-t-md hover:bg-primary/50 transition-colors h-[90%] relative">
-                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-primary font-label-caps" id="home-stats-peak">0</div>
-              </div>
-              <div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[55%]"></div>
-              <div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[75%]"></div>
-              <div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[45%]"></div>
-              <div class="flex-1 bg-white/5 rounded-t-md hover:bg-primary/40 transition-colors h-[30%]"></div>
+              <!-- 동적으로 렌더링됨 -->
+            </div>
+            <div class="flex justify-between mt-2 text-[10px] text-on-surface-variant/50" id="home-stats-labels">
+              <!-- 동적으로 렌더링됨 -->
             </div>
           </div>
           <div class="mt-6 flex justify-between items-center text-body-sm text-on-surface-variant">
             <span id="home-stats-total">총 0개의 추억</span>
             <button class="text-primary hover:underline font-medium" id="home-goto-timeline">모두 보기</button>
+          </div>
+        </section>
+
+        <!-- 🎲 랜덤 추억 카드 -->
+        <section class="col-span-4 md:col-span-6 glass-surface rounded-lg overflow-hidden relative min-h-[240px] group cursor-pointer" id="home-random-card" style="display:none;">
+          <img id="home-random-img" alt="랜덤 추억" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="" />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+          <!-- 폴라로이드 감성 오버레이 -->
+          <div class="absolute top-4 left-4 flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-tertiary-container/30 flex items-center justify-center">
+              <span class="material-symbols-outlined text-tertiary text-lg" style="font-variation-settings: 'FILL' 1;">casino</span>
+            </div>
+            <span class="font-label-caps text-label-caps text-tertiary tracking-widest">RANDOM MEMORY</span>
+          </div>
+          <button class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all hover:rotate-180 duration-500 z-10" id="home-random-shuffle" title="다른 추억 보기">
+            <span class="material-symbols-outlined text-white text-sm">refresh</span>
+          </button>
+          <div class="absolute bottom-6 left-6 right-6">
+            <h3 class="font-title-md text-title-md text-white mb-1" id="home-random-memo">추억 한 조각</h3>
+            <div class="flex items-center gap-3 text-white/70 text-body-sm">
+              <span id="home-random-date">날짜</span>
+              <span>·</span>
+              <span id="home-random-location">위치</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 📊 월간 리캡 카드 -->
+        <section class="col-span-4 md:col-span-6 glass-surface rounded-lg p-card-padding" id="home-recap-card" style="display:none;">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">auto_graph</span>
+            </div>
+            <div>
+              <h3 class="font-title-md text-title-md text-primary">이번 달 리캡</h3>
+              <p class="text-body-sm text-on-surface-variant/70" id="home-recap-subtitle">활동 요약</p>
+            </div>
+          </div>
+          <!-- 이번 달 기록 수 및 증감 -->
+          <div class="flex items-baseline gap-3 mb-5">
+            <span class="text-display-lg font-display-lg text-primary leading-none" id="home-recap-count">0</span>
+            <span class="text-on-surface-variant text-body-sm">개의 추억</span>
+            <span class="text-body-sm font-medium px-2 py-0.5 rounded-full" id="home-recap-diff"></span>
+          </div>
+          <!-- 인기 해시태그 -->
+          <div class="mb-4">
+            <p class="font-label-caps text-label-caps text-on-surface-variant/60 mb-2">인기 해시태그</p>
+            <div class="flex gap-2 flex-wrap" id="home-recap-tags">
+              <span class="text-on-surface-variant/50 text-body-sm">데이터 없음</span>
+            </div>
+          </div>
+          <!-- 자주 방문한 지역 -->
+          <div>
+            <p class="font-label-caps text-label-caps text-on-surface-variant/60 mb-2">자주 방문한 곳</p>
+            <div class="flex gap-2 flex-wrap" id="home-recap-locations">
+              <span class="text-on-surface-variant/50 text-body-sm">데이터 없음</span>
+            </div>
           </div>
         </section>
 
@@ -145,6 +197,22 @@
             <!-- Dynamically filled by JS -->
           </div>
           <div class="absolute top-0 right-0 w-48 h-48 bg-secondary/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+        </section>
+
+        <!-- 🏷️ 자동 해시태그 앨범 -->
+        <section class="col-span-4 md:col-span-12 glass-surface rounded-lg p-card-padding" id="home-albums-card" style="display:none;">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-tertiary-container/20 flex items-center justify-center">
+              <span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">collections_bookmark</span>
+            </div>
+            <div>
+              <h3 class="font-title-md text-title-md text-tertiary">해시태그 앨범</h3>
+              <p class="text-body-sm text-on-surface-variant/70">자동으로 분류된 추억 모음</p>
+            </div>
+          </div>
+          <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar" id="home-albums-list">
+            <!-- Dynamically filled by JS -->
+          </div>
         </section>
 
       </div>
@@ -256,6 +324,7 @@
             <!-- ═══ Filter Bar ═══ -->
             <div class="flex gap-2 overflow-x-auto pb-1" id="filter-bar">
               <button class="filter-btn active" data-filter="all">전체</button>
+              <button class="filter-btn" data-filter="favorite">⭐ 즐겨찾기</button>
               <button class="filter-btn" data-filter="week">이번 주</button>
               <button class="filter-btn" data-filter="month">이번 달</button>
               <button class="filter-btn" data-filter="year">올해</button>
@@ -287,6 +356,7 @@
       <!-- ══ Map Quick Filter Chips (top overlay) ══ -->
       <div class="absolute top-20 left-4 right-4 z-30 flex gap-2 overflow-x-auto hide-scrollbar pointer-events-auto" id="map-filter-chips">
         <button class="map-filter-chip active" data-map-filter="all">전체</button>
+        <button class="map-filter-chip" data-map-filter="favorite">⭐ 즐겨찾기</button>
         <button class="map-filter-chip" data-map-filter="week">이번 주</button>
         <button class="map-filter-chip" data-map-filter="month">이번 달</button>
         <button class="map-filter-chip" data-map-filter="year">올해</button>
@@ -351,29 +421,71 @@
       </div>
     </div>
 
+    <!-- ══════════════ CALENDAR VIEW ══════════════ -->
+    <div class="view-container" id="view-calendar">
+      <div class="max-w-2xl mx-auto">
+        <!-- Calendar Header -->
+        <div class="flex items-center justify-between mb-6">
+          <button class="w-10 h-10 rounded-full glass-surface flex items-center justify-center hover:bg-white/10 transition-colors" id="cal-prev">
+            <span class="material-symbols-outlined text-on-surface-variant">chevron_left</span>
+          </button>
+          <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary" id="cal-title">2025년 5월</h2>
+          <button class="w-10 h-10 rounded-full glass-surface flex items-center justify-center hover:bg-white/10 transition-colors" id="cal-next">
+            <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+          </button>
+        </div>
+        <!-- Weekday Header -->
+        <div class="grid grid-cols-7 gap-1 mb-2">
+          <div class="text-center text-label-caps font-label-caps text-error/80">일</div>
+          <div class="text-center text-label-caps font-label-caps text-on-surface-variant/60">월</div>
+          <div class="text-center text-label-caps font-label-caps text-on-surface-variant/60">화</div>
+          <div class="text-center text-label-caps font-label-caps text-on-surface-variant/60">수</div>
+          <div class="text-center text-label-caps font-label-caps text-on-surface-variant/60">목</div>
+          <div class="text-center text-label-caps font-label-caps text-on-surface-variant/60">금</div>
+          <div class="text-center text-label-caps font-label-caps text-primary/60">토</div>
+        </div>
+        <!-- Calendar Grid -->
+        <div class="grid grid-cols-7 gap-1" id="cal-grid">
+          <!-- Dynamically rendered -->
+        </div>
+        <!-- Selected Day Photos -->
+        <div class="mt-6" id="cal-day-photos" style="display:none;">
+          <h3 class="font-title-md text-title-md text-primary mb-4" id="cal-day-title">선택된 날짜</h3>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="cal-day-grid">
+            <!-- Dynamically rendered -->
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- ══════════════ Bottom Navigation Bar (from STITCH screen7) ══════════════ -->
-  <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-2 pt-2 bg-white/5 backdrop-blur-xl border-t border-white/10 glass-edge shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
+  <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-2 pt-2 bg-white/5 backdrop-blur-xl border-t border-white/10 glass-edge shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
     <!-- Home -->
-    <a class="nav-item flex flex-col items-center justify-center p-3 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-home" data-view="home">
-      <span class="material-symbols-outlined">home</span>
-      <span class="font-label-caps text-label-caps mt-1">홈</span>
+    <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-home" data-view="home">
+      <span class="material-symbols-outlined text-xl">home</span>
+      <span class="font-label-caps text-[10px] mt-0.5">홈</span>
     </a>
     <!-- Timeline -->
-    <a class="nav-item flex flex-col items-center justify-center p-3 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-timeline" data-view="timeline">
-      <span class="material-symbols-outlined">auto_awesome_motion</span>
-      <span class="font-label-caps text-label-caps mt-1">기록</span>
+    <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-timeline" data-view="timeline">
+      <span class="material-symbols-outlined text-xl">auto_awesome_motion</span>
+      <span class="font-label-caps text-[10px] mt-0.5">기록</span>
     </a>
     <!-- Add (Upload) -->
-    <a class="nav-item flex flex-col items-center justify-center p-3 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-add">
-      <span class="material-symbols-outlined">add_circle</span>
-      <span class="font-label-caps text-label-caps mt-1">추가</span>
+    <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-add">
+      <span class="material-symbols-outlined text-xl">add_circle</span>
+      <span class="font-label-caps text-[10px] mt-0.5">추가</span>
+    </a>
+    <!-- Calendar -->
+    <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-calendar" data-view="calendar">
+      <span class="material-symbols-outlined text-xl">calendar_month</span>
+      <span class="font-label-caps text-[10px] mt-0.5">달력</span>
     </a>
     <!-- Map -->
-    <a class="nav-item flex flex-col items-center justify-center p-3 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-map" data-view="map">
-      <span class="material-symbols-outlined">map</span>
-      <span class="font-label-caps text-label-caps mt-1">지도</span>
+    <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-map" data-view="map">
+      <span class="material-symbols-outlined text-xl">map</span>
+      <span class="font-label-caps text-[10px] mt-0.5">지도</span>
     </a>
   </nav>
 
@@ -408,6 +520,9 @@
         <img id="photo-modal-img" src="" alt="확대된 사진" class="parallax-bg absolute inset-0 w-full h-[120%] object-cover object-center scale-110" />
         <div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
         <div class="absolute top-4 right-4 z-10 flex gap-2">
+          <button class="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors" id="photo-modal-favorite" title="즐겨찾기">
+            <span class="material-symbols-outlined text-white text-sm">star</span>
+          </button>
           <button class="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors" id="photo-modal-export" title="이미지로 저장">
             <span class="material-symbols-outlined text-white text-sm">download</span>
           </button>
@@ -451,6 +566,16 @@
                     <p class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1">장소</p>
                     <p class="font-title-md text-title-md text-white" id="photo-modal-location">—</p>
                     <input type="text" class="hidden w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-sm mt-1" id="photo-modal-location-input" placeholder="장소를 입력하세요" />
+                  </div>
+                </div>
+                <!-- 날씨 정보 -->
+                <div class="flex items-center gap-4" id="photo-modal-weather-row" style="display:none;">
+                  <div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary-container">cloud</span>
+                  </div>
+                  <div>
+                    <p class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1">촬영 당시 날씨</p>
+                    <p class="font-title-md text-title-md text-white" id="photo-modal-weather">—</p>
                   </div>
                 </div>
               </div>

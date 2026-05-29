@@ -2,6 +2,12 @@
  * app.js - 메인 앱 진입점
  * STITCH Liquid Bento 디자인 시스템 기반
  * 뷰 토글, 이벤트 리스너, UI 렌더링
+ *
+ * 기능:
+ *  - 홈/타임라인/캘린더/지도 4개 뷰 + 추가 버튼
+ *  - 사진 업로드 및 EXIF 추출
+ *  - 즐겨찾기(⭐), 랜덤 추억, 월간 리캡, 자동 해시태그 앨범
+ *  - 촬영 당시 날씨 표시 (Open-Meteo API)
  */
 import './style.css';
 import heic2any from 'heic2any';
@@ -40,12 +46,14 @@ const toast = document.getElementById('toast');
 const homeView = document.getElementById('view-home');
 const timelineView = document.getElementById('view-timeline');
 const mapView = document.getElementById('view-map');
+const calendarView = document.getElementById('view-calendar');
 
 // 하단 네비
 const navHome = document.getElementById('nav-home');
 const navTimeline = document.getElementById('nav-timeline');
 const navMap = document.getElementById('nav-map');
 const navAdd = document.getElementById('nav-add');
+const navCalendar = document.getElementById('nav-calendar');
 
 // EXIF 표시 요소 (날짜와 주소는 수동입력으로 통합됨)
 const exifCoord = document.getElementById('exif-coord');
@@ -75,6 +83,7 @@ const photoModal = document.getElementById('photo-modal');
 const photoModalClose = document.getElementById('photo-modal-close');
 const photoModalEdit = document.getElementById('photo-modal-edit');
 const photoModalExport = document.getElementById('photo-modal-export');
+const photoModalFavorite = document.getElementById('photo-modal-favorite');
 const photoModalImg = document.getElementById('photo-modal-img');
 const photoModalDate = document.getElementById('photo-modal-date');
 const photoModalDateInput = document.getElementById('photo-modal-date-input');
@@ -85,6 +94,8 @@ const photoModalMemoTextarea = document.getElementById('photo-modal-memo-textare
 const photoModalTitle = document.getElementById('photo-modal-title');
 const photoModalTag = document.getElementById('photo-modal-tag');
 const photoModalSaveBtn = document.getElementById('photo-modal-save-btn');
+const photoModalWeatherRow = document.getElementById('photo-modal-weather-row');
+const photoModalWeather = document.getElementById('photo-modal-weather');
 
 // 홈 뷰 요소
 const homeTotalCount = document.getElementById('home-total-count');
@@ -93,10 +104,31 @@ const homeRecentImg = document.getElementById('home-recent-img');
 const homeRecentMemo = document.getElementById('home-recent-memo');
 const homeRecentLocation = document.getElementById('home-recent-location');
 const homeRecentDate = document.getElementById('home-recent-date');
-const homeStatsPeak = document.getElementById('home-stats-peak');
 const homeStatsTotal = document.getElementById('home-stats-total');
+const homeStatsBars = document.getElementById('home-stats-bars');
+const homeStatsLabels = document.getElementById('home-stats-labels');
 const homeGotoTimeline = document.getElementById('home-goto-timeline');
 const homeUploadBtn = document.getElementById('home-upload-btn');
+
+// 랜덤 추억 요소
+const homeRandomCard = document.getElementById('home-random-card');
+const homeRandomImg = document.getElementById('home-random-img');
+const homeRandomMemo = document.getElementById('home-random-memo');
+const homeRandomDate = document.getElementById('home-random-date');
+const homeRandomLocation = document.getElementById('home-random-location');
+const homeRandomShuffle = document.getElementById('home-random-shuffle');
+
+// 리캡 요소
+const homeRecapCard = document.getElementById('home-recap-card');
+const homeRecapCount = document.getElementById('home-recap-count');
+const homeRecapDiff = document.getElementById('home-recap-diff');
+const homeRecapSubtitle = document.getElementById('home-recap-subtitle');
+const homeRecapTags = document.getElementById('home-recap-tags');
+const homeRecapLocations = document.getElementById('home-recap-locations');
+
+// 앨범 요소
+const homeAlbumsCard = document.getElementById('home-albums-card');
+const homeAlbumsList = document.getElementById('home-albums-list');
 
 // 맵 뷰 요소
 const mapLocationCount = document.getElementById('map-location-count');
@@ -121,6 +153,15 @@ const homeOnthisdayCard = document.getElementById('home-onthisday-card');
 const homeOnthisdayLabel = document.getElementById('home-onthisday-label');
 const homeOnthisdayList = document.getElementById('home-onthisday-list');
 
+// 캘린더 요소
+const calTitle = document.getElementById('cal-title');
+const calGrid = document.getElementById('cal-grid');
+const calPrev = document.getElementById('cal-prev');
+const calNext = document.getElementById('cal-next');
+const calDayPhotos = document.getElementById('cal-day-photos');
+const calDayTitle = document.getElementById('cal-day-title');
+const calDayGrid = document.getElementById('cal-day-grid');
+
 // ──────────────────────────────────────
 // State
 // ──────────────────────────────────────
@@ -130,11 +171,55 @@ let currentThumbnail = null;
 let currentFileBase64 = null;
 let currentFileName = '';
 let mapInitialized = false;
-let currentFilter = 'all'; // 'all', 'week', 'month', 'year', 'location'
+let currentFilter = 'all'; // 'all', 'favorite', 'week', 'month', 'year', 'location'
 let currentLocationFilter = '';
 let searchQuery = '';
 let currentEditingPhoto = null;
 let currentMapFilter = 'all'; // 지도 필터 상태
+let currentRandomPhoto = null; // 랜덤 추억 상태
+
+// 캘린더 상태
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let calSelectedDate = null;
+
+// ──────────────────────────────────────
+// WMO Weather Code Mapping
+// ──────────────────────────────────────
+const WMO_CODES = {
+  0: { emoji: '☀️', desc: '맑음' },
+  1: { emoji: '🌤️', desc: '대체로 맑음' },
+  2: { emoji: '⛅', desc: '부분적 흐림' },
+  3: { emoji: '☁️', desc: '흐림' },
+  45: { emoji: '🌫️', desc: '안개' },
+  48: { emoji: '🌫️', desc: '서리 안개' },
+  51: { emoji: '🌧️', desc: '가벼운 이슬비' },
+  53: { emoji: '🌧️', desc: '이슬비' },
+  55: { emoji: '🌧️', desc: '강한 이슬비' },
+  56: { emoji: '🌧️', desc: '차가운 이슬비' },
+  57: { emoji: '🌧️', desc: '강한 차가운 이슬비' },
+  61: { emoji: '🌧️', desc: '가벼운 비' },
+  63: { emoji: '🌧️', desc: '비' },
+  65: { emoji: '🌧️', desc: '강한 비' },
+  66: { emoji: '🌧️', desc: '차가운 비' },
+  67: { emoji: '🌧️', desc: '강한 차가운 비' },
+  71: { emoji: '🌨️', desc: '가벼운 눈' },
+  73: { emoji: '🌨️', desc: '눈' },
+  75: { emoji: '🌨️', desc: '강한 눈' },
+  77: { emoji: '🌨️', desc: '눈 알갱이' },
+  80: { emoji: '🌦️', desc: '가벼운 소나기' },
+  81: { emoji: '🌦️', desc: '소나기' },
+  82: { emoji: '⛈️', desc: '강한 소나기' },
+  85: { emoji: '🌨️', desc: '가벼운 눈 소나기' },
+  86: { emoji: '🌨️', desc: '강한 눈 소나기' },
+  95: { emoji: '⛈️', desc: '뇌우' },
+  96: { emoji: '⛈️', desc: '우박 뇌우' },
+  99: { emoji: '⛈️', desc: '강한 우박 뇌우' },
+};
+
+function getWeatherInfo(code) {
+  return WMO_CODES[code] || { emoji: '🌡️', desc: '알 수 없음' };
+}
 
 // 해시태그 포맷팅 유틸리티
 function formatHashtags(text) {
@@ -246,6 +331,59 @@ async function reverseGeocode(lat, lng) {
 }
 
 // ──────────────────────────────────────
+// Weather API (Open-Meteo)
+// ──────────────────────────────────────
+async function fetchWeather(lat, lng, dateStr) {
+  if (lat == null || lng == null || !dateStr) return null;
+  try {
+    const d = new Date(dateStr);
+    const dateOnly = d.toISOString().split('T')[0]; // YYYY-MM-DD
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    let apiUrl;
+    if (d < today) {
+      // 과거 날씨
+      apiUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lng}&start_date=${dateOnly}&end_date=${dateOnly}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
+    } else {
+      // 오늘 또는 미래
+      apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=${dateOnly}&end_date=${dateOnly}`;
+    }
+
+    const res = await fetch(apiUrl);
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    if (data.daily && data.daily.weather_code && data.daily.weather_code.length > 0) {
+      const code = data.daily.weather_code[0];
+      const tempMax = data.daily.temperature_2m_max?.[0];
+      const tempMin = data.daily.temperature_2m_min?.[0];
+      const info = getWeatherInfo(code);
+      return {
+        code,
+        emoji: info.emoji,
+        desc: info.desc,
+        tempMax: tempMax != null ? Math.round(tempMax) : null,
+        tempMin: tempMin != null ? Math.round(tempMin) : null,
+      };
+    }
+    return null;
+  } catch (err) {
+    console.warn('Weather API failed:', err);
+    return null;
+  }
+}
+
+function formatWeatherDisplay(weather) {
+  if (!weather) return null;
+  let text = `${weather.emoji} ${weather.desc}`;
+  if (weather.tempMax != null) {
+    text += ` ${weather.tempMin ?? ''}~${weather.tempMax}°C`;
+  }
+  return text;
+}
+
+// ──────────────────────────────────────
 // File Upload & EXIF Extraction
 // ──────────────────────────────────────
 async function handleFilesSelect(files) {
@@ -293,6 +431,12 @@ async function handleFilesSelect(files) {
           address = await reverseGeocode(exifData.lat, exifData.lng).catch(() => null);
         }
 
+        // 날씨 정보 가져오기
+        let weather = null;
+        if (exifData.lat != null && exifData.lng != null && exifData.date) {
+          weather = await fetchWeather(exifData.lat, exifData.lng, exifData.date).catch(() => null);
+        }
+
         const photoData = {
           id: generateId(),
           imageDataUrl: base64,
@@ -304,6 +448,8 @@ async function handleFilesSelect(files) {
           memo: '',
           fileName: processFile.name,
           createdAt: Date.now(),
+          favorite: false,
+          weather: weather || null,
         };
 
         await savePhoto(photoData);
@@ -451,6 +597,12 @@ async function handleSave() {
 
     let finalAddress = manualAddressInput.value.trim() || null;
 
+    // 날씨 정보 가져오기
+    let weather = null;
+    if (currentExifData?.lat != null && currentExifData?.lng != null && finalDate) {
+      weather = await fetchWeather(currentExifData.lat, currentExifData.lng, finalDate).catch(() => null);
+    }
+
     const photoData = {
       id: generateId(),
       imageDataUrl: currentFileBase64,
@@ -462,6 +614,8 @@ async function handleSave() {
       memo: memoTextarea.value.trim(),
       fileName: currentFileName,
       createdAt: Date.now(),
+      favorite: false,
+      weather: weather || null,
     };
 
     await savePhoto(photoData);
@@ -508,6 +662,16 @@ async function handleDelete(id) {
 }
 
 // ──────────────────────────────────────
+// Toggle Favorite
+// ──────────────────────────────────────
+async function toggleFavorite(photo) {
+  photo.favorite = !photo.favorite;
+  await savePhoto(photo);
+  showToast(photo.favorite ? '즐겨찾기에 추가되었습니다 ⭐' : '즐겨찾기에서 제거되었습니다');
+  return photo.favorite;
+}
+
+// ──────────────────────────────────────
 // Render Home View (screen10)
 // ──────────────────────────────────────
 async function updateHomeView() {
@@ -517,7 +681,9 @@ async function updateHomeView() {
   // 총 개수 표시
   homeTotalCount.textContent = count.toLocaleString();
   homeStatsTotal.textContent = `총 ${count}개의 추억`;
-  homeStatsPeak.textContent = count;
+
+  // 동적 월별 통계 차트 렌더링
+  renderMonthlyChart(photos);
 
   // 최근 기록 카드
   if (count > 0) {
@@ -544,6 +710,221 @@ async function updateHomeView() {
 
   // '오늘의 추억' (오늘과 같은 날 N년 전 사진 검색)
   updateOnThisDay(photos);
+
+  // 랜덤 추억 카드
+  updateRandomCard(photos);
+
+  // 월간 리캡
+  updateMonthlyRecap(photos);
+
+  // 해시태그 앨범
+  updateHashtagAlbums(photos);
+}
+
+// ──────────────────────────────────────
+// Monthly Chart (동적 7개월 통계)
+// ──────────────────────────────────────
+function renderMonthlyChart(photos) {
+  if (!homeStatsBars || !homeStatsLabels) return;
+
+  const now = new Date();
+  const months = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ year: d.getFullYear(), month: d.getMonth() });
+  }
+
+  // 월별 사진 수 카운트
+  const counts = months.map(m => {
+    return photos.filter(p => {
+      const pd = p.date ? new Date(p.date) : new Date(p.createdAt);
+      return pd.getFullYear() === m.year && pd.getMonth() === m.month;
+    }).length;
+  });
+
+  const maxCount = Math.max(...counts, 1);
+
+  // 바 렌더링
+  homeStatsBars.innerHTML = counts.map((c, i) => {
+    const pct = Math.max((c / maxCount) * 100, 4);
+    const isMax = c === maxCount && c > 0;
+    const isCurrent = i === counts.length - 1;
+    const bgClass = isCurrent ? 'bg-primary/40' : (isMax ? 'bg-primary/30' : 'bg-white/5');
+    return `
+      <div class="flex-1 ${bgClass} rounded-t-md hover:bg-primary/50 transition-colors relative" style="height:${pct}%">
+        ${isMax ? `<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-primary font-label-caps text-[10px]">${c}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  // 라벨 렌더링
+  const monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  homeStatsLabels.innerHTML = months.map(m => `<span>${monthNames[m.month]}</span>`).join('');
+}
+
+// ──────────────────────────────────────
+// Random Memory Card (🎲)
+// ──────────────────────────────────────
+function updateRandomCard(photos) {
+  if (!homeRandomCard) return;
+
+  if (photos.length === 0) {
+    homeRandomCard.style.display = 'none';
+    return;
+  }
+
+  homeRandomCard.style.display = '';
+  shuffleRandomPhoto(photos);
+}
+
+function shuffleRandomPhoto(photos) {
+  if (!photos || photos.length === 0) return;
+
+  const idx = Math.floor(Math.random() * photos.length);
+  currentRandomPhoto = photos[idx];
+  const photo = currentRandomPhoto;
+
+  homeRandomImg.src = photo.thumbnailDataUrl;
+  homeRandomMemo.textContent = photo.memo || photo.fileName || '추억 한 조각';
+  homeRandomDate.textContent = formatDate(photo.date) || '날짜 미상';
+  homeRandomLocation.textContent = photo.address || (photo.lat ? `${photo.lat.toFixed(3)}, ${photo.lng.toFixed(3)}` : '위치 미상');
+}
+
+// ──────────────────────────────────────
+// Monthly Recap (📊)
+// ──────────────────────────────────────
+function updateMonthlyRecap(photos) {
+  if (!homeRecapCard) return;
+
+  if (photos.length === 0) {
+    homeRecapCard.style.display = 'none';
+    return;
+  }
+
+  homeRecapCard.style.display = '';
+
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+
+  // 이번 달 사진
+  const thisMonthPhotos = photos.filter(p => {
+    const d = p.date ? new Date(p.date) : new Date(p.createdAt);
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+  });
+
+  // 지난 달 사진
+  const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
+  const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
+  const lastMonthPhotos = photos.filter(p => {
+    const d = p.date ? new Date(p.date) : new Date(p.createdAt);
+    return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
+  });
+
+  const thisCount = thisMonthPhotos.length;
+  const lastCount = lastMonthPhotos.length;
+  const diff = thisCount - lastCount;
+
+  homeRecapCount.textContent = thisCount;
+  homeRecapSubtitle.textContent = `${now.getFullYear()}년 ${now.getMonth() + 1}월 활동`;
+
+  if (diff > 0) {
+    homeRecapDiff.textContent = `▲ ${diff}`;
+    homeRecapDiff.className = 'text-body-sm font-medium px-2 py-0.5 rounded-full bg-green-500/20 text-green-400';
+  } else if (diff < 0) {
+    homeRecapDiff.textContent = `▼ ${Math.abs(diff)}`;
+    homeRecapDiff.className = 'text-body-sm font-medium px-2 py-0.5 rounded-full bg-red-500/20 text-red-400';
+  } else {
+    homeRecapDiff.textContent = '— 동일';
+    homeRecapDiff.className = 'text-body-sm font-medium px-2 py-0.5 rounded-full bg-white/10 text-on-surface-variant';
+  }
+
+  // 인기 해시태그 Top 3
+  const tagCounts = {};
+  photos.forEach(p => {
+    if (!p.memo) return;
+    const tags = p.memo.match(/(#[A-Za-z0-9가-힣_]+)/g);
+    if (tags) tags.forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; });
+  });
+
+  const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  if (topTags.length > 0) {
+    homeRecapTags.innerHTML = topTags.map(([tag, count]) =>
+      `<span class="recap-chip tag-chip cursor-pointer" data-search-tag="${tag}">${tag} <span class="text-on-surface-variant/50">${count}</span></span>`
+    ).join('');
+  } else {
+    homeRecapTags.innerHTML = '<span class="text-on-surface-variant/50 text-body-sm">해시태그가 없습니다</span>';
+  }
+
+  // 자주 방문한 지역 Top 3
+  const locationCounts = {};
+  photos.forEach(p => {
+    if (!p.address) return;
+    const region = p.address.split(' ')[0];
+    if (region) locationCounts[region] = (locationCounts[region] || 0) + 1;
+  });
+
+  const topLocations = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  if (topLocations.length > 0) {
+    homeRecapLocations.innerHTML = topLocations.map(([loc, count]) =>
+      `<span class="recap-chip location-chip">${loc} <span class="text-on-surface-variant/50">${count}</span></span>`
+    ).join('');
+  } else {
+    homeRecapLocations.innerHTML = '<span class="text-on-surface-variant/50 text-body-sm">위치 데이터가 없습니다</span>';
+  }
+}
+
+// ──────────────────────────────────────
+// Hashtag Albums (🏷️)
+// ──────────────────────────────────────
+function updateHashtagAlbums(photos) {
+  if (!homeAlbumsCard || !homeAlbumsList) return;
+
+  // 모든 해시태그 추출
+  const tagMap = {}; // tag -> [photo, ...]
+  photos.forEach(p => {
+    if (!p.memo) return;
+    const tags = p.memo.match(/(#[A-Za-z0-9가-힣_]+)/g);
+    if (tags) {
+      tags.forEach(t => {
+        if (!tagMap[t]) tagMap[t] = [];
+        tagMap[t].push(p);
+      });
+    }
+  });
+
+  const albums = Object.entries(tagMap).sort((a, b) => b[1].length - a[1].length);
+
+  if (albums.length === 0) {
+    homeAlbumsCard.style.display = 'none';
+    return;
+  }
+
+  homeAlbumsCard.style.display = '';
+  homeAlbumsList.innerHTML = albums.map(([tag, tagPhotos]) => {
+    const coverPhoto = tagPhotos[0]; // 최신 사진을 커버로
+    return `
+      <div class="album-card" data-album-tag="${tag}">
+        <img src="${coverPhoto.thumbnailDataUrl}" alt="${tag}" loading="lazy" />
+        <div class="album-overlay">
+          <span class="album-tag">${tag}</span>
+          <span class="album-count">${tagPhotos.length}장</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // 앨범 카드 클릭 이벤트
+  homeAlbumsList.querySelectorAll('.album-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const tag = card.dataset.albumTag;
+      searchQuery = tag;
+      if (searchInput) searchInput.value = tag;
+      searchContainer.classList.remove('hidden');
+      switchView('timeline');
+      renderTimeline();
+    });
+  });
 }
 
 // ──────────────────────────────────────
@@ -605,7 +986,9 @@ function updateOnThisDay(photos) {
 // ──────────────────────────────────────
 function getFilteredMapPhotos(photos) {
   const now = new Date();
-  if (currentMapFilter === 'week') {
+  if (currentMapFilter === 'favorite') {
+    return photos.filter(p => p.favorite === true);
+  } else if (currentMapFilter === 'week') {
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     return photos.filter(p => {
       const d = p.date ? new Date(p.date) : new Date(p.createdAt);
@@ -656,9 +1039,11 @@ async function renderTimeline() {
     });
   }
 
-  // 시간/장소 필터
+  // 시간/장소/즐겨찾기 필터
   const now = new Date();
-  if (currentFilter === 'week') {
+  if (currentFilter === 'favorite') {
+    photos = photos.filter(p => p.favorite === true);
+  } else if (currentFilter === 'week') {
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     photos = photos.filter(p => {
       const d = p.date ? new Date(p.date) : new Date(p.createdAt);
@@ -719,6 +1104,8 @@ async function renderTimeline() {
     timelineEmptyState.classList.remove('hidden');
     if (searchQuery) {
       timelineEmptyState.querySelector('p').innerHTML = '검색 결과가 없습니다.<br/>다른 키워드로 검색해보세요.';
+    } else if (currentFilter === 'favorite') {
+      timelineEmptyState.querySelector('p').innerHTML = '즐겨찾기한 추억이 없습니다.<br/>⭐ 버튼을 눌러 즐겨찾기를 추가해보세요!';
     } else {
       timelineEmptyState.querySelector('p').innerHTML = '아직 기록된 추억이 없습니다.<br/>사진을 업로드하여 첫 추억을 남겨보세요!';
     }
@@ -738,6 +1125,12 @@ async function renderTimeline() {
         locationStr = `${photo.lat.toFixed(4)}, ${photo.lng.toFixed(4)}`;
       }
 
+      // 날씨 배지
+      const weatherBadge = photo.weather ? `<span class="weather-badge">${photo.weather.emoji} ${photo.weather.tempMax ?? ''}°</span>` : '';
+
+      // 즐겨찾기 상태
+      const favClass = photo.favorite ? 'is-fav' : '';
+
       // 첫 번째 카드는 크게 (screen7 Recent Record 스타일)
       const isLarge = idx === 0;
       const colSpan = isLarge ? 'col-span-4 md:col-span-6' : 'col-span-2 md:col-span-4';
@@ -749,13 +1142,20 @@ async function renderTimeline() {
           <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
           <!-- Badge -->
           ${dateStr ? `
-          <div class="absolute top-4 left-4 glass-surface backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
-            <span class="font-label-caps text-label-caps text-white">${dateStr}</span>
+          <div class="absolute top-4 left-4 flex gap-2 items-center">
+            <div class="glass-surface backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
+              <span class="font-label-caps text-label-caps text-white">${dateStr}</span>
+            </div>
+            ${weatherBadge}
           </div>
           ` : ''}
           <!-- Delete Button -->
           <button class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors z-10 opacity-0 group-hover:opacity-100" data-delete-id="${photo.id}" title="삭제">
             <span class="material-symbols-outlined text-white text-sm">close</span>
+          </button>
+          <!-- Favorite Button -->
+          <button class="favorite-btn-card ${favClass}" data-fav-id="${photo.id}" title="즐겨찾기">
+            <span class="material-symbols-outlined">star</span>
           </button>
           <!-- Bottom Info -->
           <div class="absolute bottom-6 left-6 right-6">
@@ -771,6 +1171,7 @@ async function renderTimeline() {
   timelineGrid.querySelectorAll('[data-id]').forEach(card => {
     card.addEventListener('click', (e) => {
       if (e.target.closest('[data-delete-id]')) return;
+      if (e.target.closest('[data-fav-id]')) return;
       const id = card.dataset.id;
       const photo = photos.find(p => p.id === id);
       if (photo) openPhotoModal(photo);
@@ -785,10 +1186,149 @@ async function renderTimeline() {
     });
   });
 
+  // 즐겨찾기 버튼 이벤트
+  timelineGrid.querySelectorAll('[data-fav-id]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.favId;
+      const photo = photos.find(p => p.id === id);
+      if (photo) {
+        const isFav = await toggleFavorite(photo);
+        btn.classList.toggle('is-fav', isFav);
+      }
+    });
+  });
+
   // 지도가 초기화되어 있으면 마커도 갱신
   if (mapInitialized) {
     renderMarkers(photos);
   }
+}
+
+// ──────────────────────────────────────
+// Calendar View (📅)
+// ──────────────────────────────────────
+async function renderCalendar() {
+  if (!calGrid || !calTitle) return;
+
+  const photos = await getAllPhotos();
+  const year = calYear;
+  const month = calMonth;
+
+  calTitle.textContent = `${year}년 ${month + 1}월`;
+
+  // 해당 월의 첫 번째 날
+  const firstDay = new Date(year, month, 1);
+  const startDayOfWeek = firstDay.getDay(); // 0=일요일
+
+  // 해당 월의 마지막 날
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+
+  // 날짜별 사진 매핑
+  const photosByDate = {};
+  photos.forEach(p => {
+    if (!p.date) return;
+    const d = new Date(p.date);
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      const key = d.getDate();
+      if (!photosByDate[key]) photosByDate[key] = [];
+      photosByDate[key].push(p);
+    }
+  });
+
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const todayDate = today.getDate();
+
+  let html = '';
+
+  // 빈 셀 (첫 주 앞)
+  for (let i = 0; i < startDayOfWeek; i++) {
+    html += '<div class="cal-cell empty"></div>';
+  }
+
+  // 날짜 셀
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayPhotos = photosByDate[day];
+    const hasPhoto = dayPhotos && dayPhotos.length > 0;
+    const isToday = isCurrentMonth && day === todayDate;
+    const isSelected = calSelectedDate && calSelectedDate.year === year && calSelectedDate.month === month && calSelectedDate.day === day;
+
+    let classes = 'cal-cell';
+    if (hasPhoto) classes += ' has-photo';
+    if (isToday) classes += ' today';
+    if (isSelected) classes += ' selected';
+
+    let style = '';
+    if (hasPhoto) {
+      style = `style="background-image: url('${dayPhotos[0].thumbnailDataUrl}')"`;
+    }
+
+    const countBadge = hasPhoto && dayPhotos.length > 1 ? `<span class="cal-photo-count">${dayPhotos.length}</span>` : '';
+
+    html += `<div class="${classes}" data-day="${day}" ${style}><span class="cal-date-num">${day}</span>${countBadge}</div>`;
+  }
+
+  calGrid.innerHTML = html;
+
+  // 날짜 클릭 이벤트
+  calGrid.querySelectorAll('.cal-cell:not(.empty)').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const day = parseInt(cell.dataset.day);
+      calSelectedDate = { year, month, day };
+
+      // 선택 상태 업데이트
+      calGrid.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('selected'));
+      cell.classList.add('selected');
+
+      // 해당 날짜 사진 표시
+      const dayPhotos = photosByDate[day];
+      renderCalendarDayPhotos(day, dayPhotos || [], photos);
+    });
+  });
+
+  // 선택된 날짜가 있으면 사진 표시
+  if (calSelectedDate && calSelectedDate.year === year && calSelectedDate.month === month) {
+    const dayPhotos = photosByDate[calSelectedDate.day];
+    renderCalendarDayPhotos(calSelectedDate.day, dayPhotos || [], photos);
+  } else {
+    if (calDayPhotos) calDayPhotos.style.display = 'none';
+  }
+}
+
+function renderCalendarDayPhotos(day, dayPhotos, allPhotos) {
+  if (!calDayPhotos || !calDayGrid || !calDayTitle) return;
+
+  if (dayPhotos.length === 0) {
+    calDayPhotos.style.display = 'none';
+    return;
+  }
+
+  calDayPhotos.style.display = '';
+  calDayTitle.textContent = `${calYear}년 ${calMonth + 1}월 ${day}일 — ${dayPhotos.length}장`;
+
+  calDayGrid.innerHTML = dayPhotos.map(photo => {
+    const weatherBadge = photo.weather ? `<span class="weather-badge" style="position:absolute;top:4px;right:4px;z-index:2;">${photo.weather.emoji}</span>` : '';
+    return `
+      <div class="cal-photo-card" data-id="${photo.id}">
+        <img src="${photo.thumbnailDataUrl}" alt="${photo.fileName || '사진'}" loading="lazy" />
+        ${weatherBadge}
+        <div class="overlay">
+          <span>${photo.memo || photo.fileName || '메모 없음'}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // 클릭 이벤트
+  calDayGrid.querySelectorAll('.cal-photo-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = card.dataset.id;
+      const photo = dayPhotos.find(p => p.id === id) || allPhotos.find(p => p.id === id);
+      if (photo) openPhotoModal(photo);
+    });
+  });
 }
 
 // ──────────────────────────────────────
@@ -801,6 +1341,7 @@ function switchView(view) {
   homeView.classList.toggle('active', view === 'home');
   timelineView.classList.toggle('active', view === 'timeline');
   mapView.classList.toggle('active', view === 'map');
+  if (calendarView) calendarView.classList.toggle('active', view === 'calendar');
 
   // 네비 활성 상태
   document.querySelectorAll('.nav-item').forEach(item => {
@@ -829,6 +1370,10 @@ function switchView(view) {
     refreshMap();
     refreshMapMarkers();
   }
+
+  if (view === 'calendar') {
+    renderCalendar();
+  }
 }
 
 // 해시태그 클릭 처리 (이벤트 위임)
@@ -845,6 +1390,19 @@ document.addEventListener('click', (e) => {
       modal.setAttribute('aria-hidden', 'true');
     });
 
+    switchView('timeline');
+    renderTimeline();
+  }
+});
+
+// 리캡 태그 칩 클릭 처리 (이벤트 위임)
+document.addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-search-tag]');
+  if (chip) {
+    const tag = chip.dataset.searchTag;
+    searchQuery = tag;
+    if (searchInput) searchInput.value = tag;
+    searchContainer.classList.remove('hidden');
     switchView('timeline');
     renderTimeline();
   }
@@ -983,6 +1541,16 @@ function initEventListeners() {
     });
   }
 
+  // 모달 즐겨찾기 버튼
+  if (photoModalFavorite) {
+    photoModalFavorite.addEventListener('click', async () => {
+      if (!currentEditingPhoto) return;
+      const isFav = await toggleFavorite(currentEditingPhoto);
+      updateModalFavoriteButton(isFav);
+      renderTimeline();
+    });
+  }
+
   if (photoModalSaveBtn) {
     photoModalSaveBtn.addEventListener('click', async () => {
       if (!currentEditingPhoto) return;
@@ -991,9 +1559,20 @@ function initEventListeners() {
       const newLocationVal = photoModalLocationInput.value.trim();
       const newMemoVal = photoModalMemoTextarea.value.trim();
       
+      const oldDate = currentEditingPhoto.date;
+      const oldLat = currentEditingPhoto.lat;
+      const oldLng = currentEditingPhoto.lng;
+
       currentEditingPhoto.date = newDateVal ? new Date(newDateVal).toISOString() : currentEditingPhoto.date;
       currentEditingPhoto.address = newLocationVal || currentEditingPhoto.address;
       currentEditingPhoto.memo = newMemoVal;
+
+      // 날짜나 좌표가 바뀌었으면 날씨 재조회
+      const dateChanged = currentEditingPhoto.date !== oldDate;
+      if (dateChanged && currentEditingPhoto.lat != null && currentEditingPhoto.lng != null) {
+        const weather = await fetchWeather(currentEditingPhoto.lat, currentEditingPhoto.lng, currentEditingPhoto.date).catch(() => null);
+        if (weather) currentEditingPhoto.weather = weather;
+      }
       
       await savePhoto(currentEditingPhoto);
       showToast('성공적으로 수정되었습니다.');
@@ -1003,6 +1582,7 @@ function initEventListeners() {
       
       // 타임라인 다시 그리기
       renderTimeline();
+      updateHomeView();
     });
   }
 
@@ -1172,6 +1752,7 @@ function initEventListeners() {
   navHome.addEventListener('click', () => switchView('home'));
   navTimeline.addEventListener('click', () => switchView('timeline'));
   navMap.addEventListener('click', () => switchView('map'));
+  if (navCalendar) navCalendar.addEventListener('click', () => switchView('calendar'));
   navAdd.addEventListener('click', () => {
     switchView('timeline');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1192,6 +1773,42 @@ function initEventListeners() {
     homeRecentCard.addEventListener('click', async () => {
       const photos = await getAllPhotos();
       if (photos.length > 0) openPhotoModal(photos[0]);
+    });
+  }
+
+  // 랜덤 추억 이벤트
+  if (homeRandomShuffle) {
+    homeRandomShuffle.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const photos = await getAllPhotos();
+      if (photos.length > 0) {
+        homeRandomCard.classList.add('shuffle-anim');
+        setTimeout(() => homeRandomCard.classList.remove('shuffle-anim'), 500);
+        shuffleRandomPhoto(photos);
+      }
+    });
+  }
+  if (homeRandomCard) {
+    homeRandomCard.addEventListener('click', () => {
+      if (currentRandomPhoto) openPhotoModal(currentRandomPhoto);
+    });
+  }
+
+  // 캘린더 네비게이션
+  if (calPrev) {
+    calPrev.addEventListener('click', () => {
+      calMonth--;
+      if (calMonth < 0) { calMonth = 11; calYear--; }
+      calSelectedDate = null;
+      renderCalendar();
+    });
+  }
+  if (calNext) {
+    calNext.addEventListener('click', () => {
+      calMonth++;
+      if (calMonth > 11) { calMonth = 0; calYear++; }
+      calSelectedDate = null;
+      renderCalendar();
     });
   }
 
@@ -1252,6 +1869,18 @@ function openMapBottomSheet(photo) {
   mapBottomSheet.classList.add('active');
 }
 
+function updateModalFavoriteButton(isFav) {
+  if (!photoModalFavorite) return;
+  const icon = photoModalFavorite.querySelector('.material-symbols-outlined');
+  if (isFav) {
+    icon.classList.add('favorite-active');
+    icon.style.fontVariationSettings = "'FILL' 1";
+  } else {
+    icon.classList.remove('favorite-active');
+    icon.style.fontVariationSettings = "'FILL' 0";
+  }
+}
+
 function openPhotoModal(photo) {
   currentEditingPhoto = photo;
   exitPhotoModalEditMode();
@@ -1272,6 +1901,17 @@ function openPhotoModal(photo) {
   }
 
   photoModalMemo.innerHTML = formatHashtags(photo.memo) || '메모가 없습니다.';
+
+  // 즐겨찾기 상태 반영
+  updateModalFavoriteButton(photo.favorite === true);
+
+  // 날씨 표시
+  if (photo.weather && photoModalWeatherRow && photoModalWeather) {
+    photoModalWeatherRow.style.display = '';
+    photoModalWeather.textContent = formatWeatherDisplay(photo.weather);
+  } else if (photoModalWeatherRow) {
+    photoModalWeatherRow.style.display = 'none';
+  }
 
   photoModal.classList.add('active');
   photoModal.setAttribute('aria-hidden', 'false');
