@@ -125,12 +125,30 @@
         </section>
 
         <!-- 🎲 랜덤 추억 카드 -->
-            <h3 class="font-title-md text-title-md text-white mb-1" id="home-random-memo">추억 한 조각</h3>
-            <div class="flex items-center gap-3 text-white/70 text-body-sm">
-              <span id="home-random-date">날짜</span>
-              <span>·</span>
-              <span id="home-random-location">위치</span>
+        <section class="col-span-4 md:col-span-6 timeline-card is-large fade-in group cursor-pointer" id="home-random-card" style="display:none;">
+          <div class="timeline-card-photo">
+            <img id="home-random-img" alt="랜덤 추억" src="" loading="lazy" />
+            <div class="photo-overlay-badges">
+              <div class="flex items-center gap-2 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
+                <span class="material-symbols-outlined text-tertiary text-sm" style="font-variation-settings: 'FILL' 1;">casino</span>
+                <span class="font-label-caps text-[10px] text-tertiary tracking-widest">RANDOM MEMORY</span>
+              </div>
+              <div class="photo-actions" style="opacity: 1;">
+                <button class="tc-action-btn hover:rotate-180 transition-all duration-500" id="home-random-shuffle" title="다른 추억 보기">
+                  <span class="material-symbols-outlined text-white text-sm">refresh</span>
+                </button>
+              </div>
             </div>
+          </div>
+          <div class="timeline-card-info gap-1" style="padding-bottom: 16px;">
+            <div class="flex items-center justify-between w-full mb-1">
+              <span class="text-tertiary font-title-sm text-sm">추억 한 조각</span>
+              <div class="flex items-center gap-2 text-on-surface-variant text-[11px]">
+                <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">schedule</span><span id="home-random-date">날짜 미상</span></span>
+                <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">location_on</span><span id="home-random-location">위치 정보</span></span>
+              </div>
+            </div>
+            <div class="info-memo text-base line-clamp-2" id="home-random-memo">메모 내용</div>
           </div>
         </section>
 

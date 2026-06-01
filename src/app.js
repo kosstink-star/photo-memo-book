@@ -780,14 +780,26 @@ function updateRandomCard(photos) {
 function shuffleRandomPhoto(photos) {
   if (!photos || photos.length === 0) return;
 
-  const idx = Math.floor(Math.random() * photos.length);
+  let idx = Math.floor(Math.random() * photos.length);
+  // 사진이 2장 이상일 때 동일 사진 연속 방지
+  if (photos.length > 1 && currentRandomPhoto && photos[idx].id === currentRandomPhoto.id) {
+    idx = (idx + 1) % photos.length;
+  }
+  
   currentRandomPhoto = photos[idx];
   const photo = currentRandomPhoto;
 
+  let locationStr = null;
+  if (photo.address) {
+    locationStr = photo.address.split(' ').slice(0, 4).join(' ');
+  } else if (photo.lat != null && photo.lng != null) {
+    locationStr = `${photo.lat.toFixed(4)}, ${photo.lng.toFixed(4)}`;
+  }
+
   homeRandomImg.src = photo.thumbnailDataUrl;
-  homeRandomMemo.textContent = photo.memo || photo.fileName || '추억 한 조각';
+  homeRandomMemo.textContent = photo.memo || '메모 없음';
   homeRandomDate.textContent = formatDate(photo.date) || '날짜 미상';
-  homeRandomLocation.textContent = photo.address || (photo.lat ? `${photo.lat.toFixed(3)}, ${photo.lng.toFixed(3)}` : '위치 미상');
+  homeRandomLocation.textContent = locationStr || '위치 미상';
 }
 
 // ──────────────────────────────────────
