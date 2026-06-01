@@ -1114,7 +1114,7 @@ async function renderTimeline() {
 
   timelineEmptyState.classList.add('hidden');
 
-  // Bento card 렌더링 (screen7 스타일)
+  // Bento card 렌더링 (사진/정보 분리 카드)
   timelineGrid.innerHTML = photos
     .map((photo, idx) => {
       const dateStr = formatDate(photo.date);
@@ -1131,36 +1131,35 @@ async function renderTimeline() {
       // 즐겨찾기 상태
       const favClass = photo.favorite ? 'is-fav' : '';
 
-      // 첫 번째 카드는 크게 (screen7 Recent Record 스타일)
+      // 첫 번째 카드는 크게
       const isLarge = idx === 0;
       const colSpan = isLarge ? 'col-span-4 md:col-span-6' : 'col-span-2 md:col-span-4';
-      const minHeight = isLarge ? 'min-h-[300px]' : 'min-h-[200px]';
+      const largeClass = isLarge ? 'is-large' : '';
 
       return `
-        <section class="${colSpan} bento-card glass-surface glass-edge rounded-lg overflow-hidden relative group cursor-pointer ${minHeight} fade-in" style="animation-delay:${idx * 0.06}s" data-id="${photo.id}">
-          <img alt="${photo.fileName || '사진'}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src="${photo.thumbnailDataUrl}" loading="lazy" />
-          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-          <!-- Badge -->
-          ${dateStr ? `
-          <div class="absolute top-4 left-4 flex gap-2 items-center">
-            <div class="glass-surface backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
-              <span class="font-label-caps text-label-caps text-white">${dateStr}</span>
+        <section class="${colSpan} timeline-card ${largeClass} fade-in" style="animation-delay:${idx * 0.06}s" data-id="${photo.id}">
+          <!-- Photo Area -->
+          <div class="timeline-card-photo">
+            <img alt="${photo.fileName || '사진'}" src="${photo.thumbnailDataUrl}" loading="lazy" />
+            <div class="photo-overlay-badges">
+              ${weatherBadge ? `<div>${weatherBadge}</div>` : '<div></div>'}
+              <div class="photo-actions">
+                <button class="w-7 h-7 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-black/60 transition-colors" data-delete-id="${photo.id}" title="삭제">
+                  <span class="material-symbols-outlined text-white text-sm">close</span>
+                </button>
+              </div>
             </div>
-            ${weatherBadge}
+            <button class="favorite-btn-card ${favClass}" data-fav-id="${photo.id}" title="즐겨찾기">
+              <span class="material-symbols-outlined">star</span>
+            </button>
           </div>
-          ` : ''}
-          <!-- Delete Button -->
-          <button class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors z-10 opacity-0 group-hover:opacity-100" data-delete-id="${photo.id}" title="삭제">
-            <span class="material-symbols-outlined text-white text-sm">close</span>
-          </button>
-          <!-- Favorite Button -->
-          <button class="favorite-btn-card ${favClass}" data-fav-id="${photo.id}" title="즐겨찾기">
-            <span class="material-symbols-outlined">star</span>
-          </button>
-          <!-- Bottom Info -->
-          <div class="absolute bottom-6 left-6 right-6">
-            <h3 class="font-title-md text-title-md text-white mb-1">${formatHashtags(photo.memo || '메모 없음')}</h3>
-            ${locationStr ? `<p class="font-body-sm text-body-sm text-white/70">${locationStr}</p>` : ''}
+          <!-- Info Area -->
+          <div class="timeline-card-info">
+            <div class="info-date-row">
+              ${dateStr ? `<span class="info-date"><span class="material-symbols-outlined">calendar_today</span>${dateStr}</span>` : '<span class="info-date">날짜 미상</span>'}
+            </div>
+            <div class="info-memo">${formatHashtags(photo.memo || '메모 없음')}</div>
+            ${locationStr ? `<div class="info-location"><span class="material-symbols-outlined">location_on</span><span>${locationStr}</span></div>` : ''}
           </div>
         </section>
       `;
