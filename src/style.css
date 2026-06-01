@@ -851,6 +851,22 @@ section:hover .favorite-btn-card {
 .timeline-card:hover .timeline-card-photo .photo-actions {
   opacity: 1;
 }
+.tc-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.tc-action-btn:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
 
 /* Info area */
 .timeline-card-info {

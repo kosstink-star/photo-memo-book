@@ -510,7 +510,7 @@ async function handleFileSelect(file) {
     return;
   }
 
-  Promise.all([extractExif(file), createThumbnail(processFile)])
+  Promise.all([extractExif(processFile), createThumbnail(processFile)])
     .then(async ([exifData, thumbnail]) => {
       currentExifData = exifData;
       currentThumbnail = thumbnail;
@@ -1114,7 +1114,7 @@ async function renderTimeline() {
 
   timelineEmptyState.classList.add('hidden');
 
-  // Bento card 렌더링 (사진/정보 분리 카드)
+  // 사진 중심 카드 렌더링 (사진이 주, 정보 하단 분리)
   timelineGrid.innerHTML = photos
     .map((photo, idx) => {
       const dateStr = formatDate(photo.date);
@@ -1138,14 +1138,14 @@ async function renderTimeline() {
 
       return `
         <section class="${colSpan} timeline-card ${largeClass} fade-in" style="animation-delay:${idx * 0.06}s" data-id="${photo.id}">
-          <!-- Photo Area -->
+          <!-- Photo Area (사진이 주) -->
           <div class="timeline-card-photo">
             <img alt="${photo.fileName || '사진'}" src="${photo.thumbnailDataUrl}" loading="lazy" />
             <div class="photo-overlay-badges">
-              ${weatherBadge ? `<div>${weatherBadge}</div>` : '<div></div>'}
+              <div>${weatherBadge}</div>
               <div class="photo-actions">
-                <button class="w-7 h-7 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-black/60 transition-colors" data-delete-id="${photo.id}" title="삭제">
-                  <span class="material-symbols-outlined text-white text-sm">close</span>
+                <button class="tc-action-btn" data-delete-id="${photo.id}" title="삭제">
+                  <span class="material-symbols-outlined text-white" style="font-size:16px;">close</span>
                 </button>
               </div>
             </div>
@@ -1153,11 +1153,9 @@ async function renderTimeline() {
               <span class="material-symbols-outlined">star</span>
             </button>
           </div>
-          <!-- Info Area -->
+          <!-- Info Area (정보 분리) -->
           <div class="timeline-card-info">
-            <div class="info-date-row">
-              ${dateStr ? `<span class="info-date"><span class="material-symbols-outlined">calendar_today</span>${dateStr}</span>` : '<span class="info-date">날짜 미상</span>'}
-            </div>
+            ${dateStr ? `<div class="info-date"><span class="material-symbols-outlined">schedule</span>${dateStr}</div>` : ''}
             <div class="info-memo">${formatHashtags(photo.memo || '메모 없음')}</div>
             ${locationStr ? `<div class="info-location"><span class="material-symbols-outlined">location_on</span><span>${locationStr}</span></div>` : ''}
           </div>

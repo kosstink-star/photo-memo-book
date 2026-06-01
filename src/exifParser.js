@@ -79,9 +79,9 @@ export function createThumbnail(file, maxWidth = 600) {
         resolve(canvas.toDataURL('image/jpeg', 0.8));
       };
       img.onerror = function () {
-        // 브라우저가 지원하지 않는 포맷(예: HEIC)일 경우 썸네일 생성 실패로 간주하되 중단되진 않게 함
+        // 브라우저가 지원하지 않는 포맷(예: HEIC)일 경우 null 반환
         clearTimeout(timeout);
-        resolve(e.target.result); // 원본 데이터 URL을 그대로 반환 (브라우저가 렌더링 못할 수도 있음)
+        resolve(null);
       };
       img.src = e.target.result;
     };
