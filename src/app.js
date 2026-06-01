@@ -581,12 +581,16 @@ async function handleFileSelect(file) {
 // ──────────────────────────────────────
 // Save Photo
 // ──────────────────────────────────────
+let isSaving = false;
+
 async function handleSave() {
+  if (isSaving) return;
   if (!currentFileBase64 || !currentThumbnail) {
     showToast('파일 변환이 완료되지 않았습니다.');
     return;
   }
 
+  isSaving = true;
   try {
     // 수동 입력값 적용 (항상 필드 값 사용)
     let finalDate = null;
@@ -626,6 +630,8 @@ async function handleSave() {
   } catch (err) {
     console.error('Save failed:', err);
     showToast(`저장 오류: ${err.name} - ${err.message}`);
+  } finally {
+    isSaving = false;
   }
 }
 
@@ -689,7 +695,7 @@ async function updateHomeView() {
   if (count > 0) {
     const recent = photos[0];
     homeRecentCard.style.display = '';
-    homeRecentImg.src = recent.thumbnailDataUrl;
+    homeRecentImg.src = recent.thumbnailDataUrl || recent.imageDataUrl;
     homeRecentMemo.textContent = recent.memo || recent.fileName || '최근 기록';
     homeRecentLocation.textContent = recent.address || (recent.lat ? `${recent.lat.toFixed(4)}, ${recent.lng.toFixed(4)}` : '위치 정보 없음');
     homeRecentDate.textContent = formatDateShort(recent.date) || formatDateShort(new Date(recent.createdAt).toISOString());
@@ -796,7 +802,7 @@ function shuffleRandomPhoto(photos) {
     locationStr = `${photo.lat.toFixed(4)}, ${photo.lng.toFixed(4)}`;
   }
 
-  homeRandomImg.src = photo.thumbnailDataUrl;
+  homeRandomImg.src = photo.thumbnailDataUrl || photo.imageDataUrl;
   homeRandomMemo.textContent = photo.memo || '메모 없음';
   homeRandomDate.textContent = formatDate(photo.date) || '날짜 미상';
   homeRandomLocation.textContent = locationStr || '위치 미상';
@@ -1152,7 +1158,7 @@ async function renderTimeline() {
         <section class="${colSpan} timeline-card ${largeClass} fade-in" style="animation-delay:${idx * 0.06}s" data-id="${photo.id}">
           <!-- Photo Area (사진이 주) -->
           <div class="timeline-card-photo">
-            <img alt="${photo.fileName || '사진'}" src="${photo.thumbnailDataUrl}" loading="lazy" />
+            <img alt="${photo.fileName || '사진'}" src="${photo.thumbnailDataUrl || photo.imageDataUrl}" loading="lazy" />
             <div class="photo-overlay-badges">
               <div>${weatherBadge}</div>
               <div class="photo-actions">
@@ -1863,7 +1869,7 @@ function openMapBottomSheet(photo) {
       })
     : '날짜 미상';
 
-  mapSheetImg.src = photo.thumbnailDataUrl;
+  mapSheetImg.src = photo.thumbnailDataUrl || photo.imageDataUrl;
   mapSheetDate.textContent = dateStr;
   mapSheetMemo.textContent = photo.memo || photo.fileName || '메모 없음';
 
