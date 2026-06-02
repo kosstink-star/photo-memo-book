@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="사진의 EXIF 데이터를 브라우저에서 안전하게 추출하고 추억을 기록하세요. 외부 서버 전송 없이 로컬에서만 동작합니다." />
+  <meta name="description" content="가족과 함께 소중한 추억을 공유하세요. 사진 업로드, 댓글, 좋아요, 앨범 관리까지." />
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src 'self';
+    script-src 'self' 'unsafe-inline';
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com;
-    img-src 'self' blob: data: https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com https://server.arcgisonline.com;
-    connect-src 'self' https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.bigdatacloud.net https://nominatim.openstreetmap.org https://api.allorigins.win https://archive-api.open-meteo.com https://api.open-meteo.com;
+    img-src 'self' blob: data: https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://*.supabase.co;
+    connect-src 'self' https://*.tile.openstreetmap.org https://cartodb-basemaps-a.global.ssl.fastly.net https://cartodb-basemaps-b.global.ssl.fastly.net https://cartodb-basemaps-c.global.ssl.fastly.net https://cartodb-basemaps-d.global.ssl.fastly.net https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://api.bigdatacloud.net https://nominatim.openstreetmap.org https://api.allorigins.win https://archive-api.open-meteo.com https://api.open-meteo.com https://*.supabase.co wss://*.supabase.co;
     frame-src 'none';
     object-src 'none';
     base-uri 'self';
     form-action 'none';
   " />
   <meta name="referrer" content="no-referrer" />
-  <title>Memoirs - 추억 기록</title>
+  <title>Memoirs - 가족 추억 공유</title>
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="icon" type="image/png" href="/favicon.png" />
@@ -29,13 +29,135 @@
   <div class="liquid-blob bg-primary-container animate-float top-[-10%] left-[-10%]"></div>
   <div class="liquid-blob bg-secondary-container animate-float bottom-[-10%] right-[-10%]" style="animation-delay: -5s;"></div>
 
-  <!-- ══════════════ Top Navigation Bar (from STITCH screen7/10) ══════════════ -->
-  <header class="fixed top-0 w-full z-50 flex justify-between items-center px-grid-margin h-16 backdrop-blur-xl bg-white/5 border-b border-white/10 glass-edge shadow-[0_0_30px_rgba(0,240,255,0.05)]">
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- AUTH SCREEN (Login / SignUp / Family Setup)           -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div id="auth-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-surface min-h-screen">
+    <div class="relative z-10 w-full max-w-md mx-4">
+
+      <!-- ── Login Form ── -->
+      <div id="auth-login" class="glass-surface rounded-2xl p-8 border border-white/10">
+        <div class="text-center mb-8">
+          <div class="w-16 h-16 rounded-2xl bg-primary-container/20 flex items-center justify-center mx-auto mb-4 cyan-glow">
+            <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">camera_roll</span>
+          </div>
+          <h1 class="font-display-lg text-display-lg text-primary mb-2">Memoirs</h1>
+          <p class="text-on-surface-variant text-body-sm">가족과 함께 소중한 추억을 공유하세요</p>
+        </div>
+        <form id="login-form" class="flex flex-col gap-4" onsubmit="return false;">
+          <div>
+            <label class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1 block">이메일</label>
+            <input type="email" id="login-email" required placeholder="email@example.com"
+              class="w-full bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface text-body-lg placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors" />
+          </div>
+          <div>
+            <label class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1 block">비밀번호</label>
+            <input type="password" id="login-password" required placeholder="비밀번호를 입력하세요" minlength="6"
+              class="w-full bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface text-body-lg placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors" />
+          </div>
+          <p class="text-error text-body-sm hidden" id="login-error"></p>
+          <button type="submit" id="login-submit"
+            class="w-full py-3.5 rounded-xl bg-primary-container text-on-primary-container font-title-md text-title-md hover:brightness-110 transition-all active:scale-95 cyan-glow mt-2">
+            로그인
+          </button>
+        </form>
+        <div class="mt-6 text-center">
+          <span class="text-on-surface-variant text-body-sm">계정이 없으신가요?</span>
+          <button class="text-primary text-body-sm font-medium hover:underline ml-1" id="goto-signup">회원가입</button>
+        </div>
+      </div>
+
+      <!-- ── SignUp Form ── -->
+      <div id="auth-signup" class="glass-surface rounded-2xl p-8 border border-white/10 hidden">
+        <div class="text-center mb-8">
+          <h2 class="font-headline-lg text-headline-lg text-primary mb-2">회원가입</h2>
+          <p class="text-on-surface-variant text-body-sm">새 계정을 만들어 시작하세요</p>
+        </div>
+        <form id="signup-form" class="flex flex-col gap-4" onsubmit="return false;">
+          <div>
+            <label class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1 block">닉네임</label>
+            <input type="text" id="signup-nickname" required placeholder="가족에게 보여질 이름" maxlength="20"
+              class="w-full bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface text-body-lg placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors" />
+          </div>
+          <div>
+            <label class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1 block">이메일</label>
+            <input type="email" id="signup-email" required placeholder="email@example.com"
+              class="w-full bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface text-body-lg placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors" />
+          </div>
+          <div>
+            <label class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1 block">비밀번호</label>
+            <input type="password" id="signup-password" required placeholder="6자 이상" minlength="6"
+              class="w-full bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface text-body-lg placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors" />
+          </div>
+          <p class="text-error text-body-sm hidden" id="signup-error"></p>
+          <button type="submit" id="signup-submit"
+            class="w-full py-3.5 rounded-xl bg-primary-container text-on-primary-container font-title-md text-title-md hover:brightness-110 transition-all active:scale-95 cyan-glow mt-2">
+            가입하기
+          </button>
+        </form>
+        <div class="mt-6 text-center">
+          <span class="text-on-surface-variant text-body-sm">이미 계정이 있으신가요?</span>
+          <button class="text-primary text-body-sm font-medium hover:underline ml-1" id="goto-login">로그인</button>
+        </div>
+      </div>
+
+      <!-- ── Family Setup (after first signup/login if no family) ── -->
+      <div id="auth-family" class="glass-surface rounded-2xl p-8 border border-white/10 hidden">
+        <div class="text-center mb-8">
+          <div class="w-16 h-16 rounded-2xl bg-secondary-container/20 flex items-center justify-center mx-auto mb-4">
+            <span class="material-symbols-outlined text-secondary text-3xl" style="font-variation-settings: 'FILL' 1;">family_restroom</span>
+          </div>
+          <h2 class="font-headline-lg text-headline-lg text-primary mb-2">가족 설정</h2>
+          <p class="text-on-surface-variant text-body-sm">가족 그룹을 만들거나 초대 코드로 참여하세요</p>
+        </div>
+        <!-- Create Family -->
+        <div class="mb-6">
+          <h3 class="font-title-md text-title-md text-white mb-3">새 가족 만들기</h3>
+          <div class="flex gap-3">
+            <input type="text" id="family-name-input" placeholder="가족 이름 (예: 김씨네)" maxlength="30"
+              class="flex-1 bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors" />
+            <button id="family-create-btn"
+              class="px-6 py-3 rounded-xl bg-primary-container text-on-primary-container font-title-md hover:brightness-110 transition-all active:scale-95 whitespace-nowrap">
+              만들기
+            </button>
+          </div>
+        </div>
+        <div class="relative flex items-center my-6">
+          <div class="flex-1 border-t border-white/10"></div>
+          <span class="px-4 text-on-surface-variant text-body-sm">또는</span>
+          <div class="flex-1 border-t border-white/10"></div>
+        </div>
+        <!-- Join Family -->
+        <div>
+          <h3 class="font-title-md text-title-md text-white mb-3">초대 코드로 참여</h3>
+          <div class="flex gap-3">
+            <input type="text" id="family-code-input" placeholder="6자리 코드 입력" maxlength="6"
+              class="flex-1 bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors text-center tracking-[0.3em] uppercase font-mono text-lg" />
+            <button id="family-join-btn"
+              class="px-6 py-3 rounded-xl glass-surface border border-white/20 text-on-surface-variant font-title-md hover:bg-white/10 transition-all active:scale-95 whitespace-nowrap">
+              참여하기
+            </button>
+          </div>
+        </div>
+        <p class="text-error text-body-sm hidden mt-4" id="family-error"></p>
+        <!-- Logout link -->
+        <div class="mt-8 text-center">
+          <button class="text-on-surface-variant/50 text-body-sm hover:text-on-surface-variant transition-colors" id="family-logout-btn">다른 계정으로 로그인</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ Top Navigation Bar ══════════════ -->
+  <header class="fixed top-0 w-full z-50 flex justify-between items-center px-grid-margin h-16 backdrop-blur-xl bg-white/5 border-b border-white/10 glass-edge shadow-[0_0_30px_rgba(0,240,255,0.05)]" id="app-header">
     <div class="flex items-center gap-2">
       <span class="material-symbols-outlined text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">camera_roll</span>
       <h1 class="font-display-lg text-title-md tracking-tighter text-primary-fixed-dim">Memoirs</h1>
     </div>
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-2">
+      <!-- Family Members Avatars (compact) -->
+      <div class="flex -space-x-2 mr-2" id="header-family-avatars"></div>
       <button class="w-10 h-10 flex items-center justify-center rounded-full text-primary-fixed-dim hover:bg-white/10 transition-colors active:scale-95 duration-200" id="btn-search" aria-label="검색">
         <span class="material-symbols-outlined">search</span>
       </button>
@@ -59,16 +181,20 @@
   <!-- ══════════════ Main Content ══════════════ -->
   <main class="max-w-[1440px] mx-auto px-grid-margin pt-24 pb-12">
 
-    <!-- ══════════════ HOME VIEW (screen10 - Memoir Home Bento) ══════════════ -->
+    <!-- ══════════════ HOME VIEW ══════════════ -->
     <div class="view-container active" id="view-home">
       <div class="grid grid-cols-4 md:grid-cols-12 gap-grid-gutter">
 
-        <!-- Hero Welcome Card (screen10: col-span-8) -->
+        <!-- Hero Welcome Card -->
         <section class="col-span-4 md:col-span-8 glass-surface rounded-lg p-card-padding flex flex-col justify-between relative overflow-hidden cyan-glow">
           <div class="relative z-10">
-            <h2 class="font-display-lg text-display-lg text-primary mb-2 hidden md:block">당신의 추억 보관함</h2>
-            <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary mb-2 md:hidden">당신의 추억 보관함</h2>
-            <p class="text-on-surface-variant font-body-lg max-w-md">소중한 순간들이 안전하게 보관되어 있습니다. 지금 추억을 돌아보세요.</p>
+            <h2 class="font-display-lg text-display-lg text-primary mb-2 hidden md:block">우리 가족의 추억</h2>
+            <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary mb-2 md:hidden">우리 가족의 추억</h2>
+            <p class="text-on-surface-variant font-body-lg max-w-md">소중한 순간들을 가족과 함께 나누세요.</p>
+            <p class="text-primary/60 text-body-sm mt-2 flex items-center gap-1" id="home-family-name">
+              <span class="material-symbols-outlined text-sm">family_restroom</span>
+              <span>가족 로딩 중...</span>
+            </p>
           </div>
           <div class="mt-8 flex items-baseline gap-2 relative z-10">
             <span class="text-primary font-display-lg text-display-lg leading-none" id="home-total-count">0</span>
@@ -77,7 +203,7 @@
           <div class="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
         </section>
 
-        <!-- Quick Upload Card (screen10: col-span-4) -->
+        <!-- Quick Upload Card -->
         <section class="col-span-4 md:col-span-4 glass-surface rounded-lg p-card-padding flex flex-col items-center justify-center text-center gap-4 group cursor-pointer hover:bg-white/10 transition-all duration-300" id="home-upload-btn">
           <div class="w-16 h-16 rounded-full bg-primary-container/20 flex items-center justify-center cyan-glow group-hover:scale-110 transition-transform duration-300">
             <span class="material-symbols-outlined text-primary-container text-4xl">cloud_upload</span>
@@ -102,22 +228,23 @@
             <div class="info-date"><span class="material-symbols-outlined">schedule</span><span id="home-recent-date">날짜</span></div>
             <div class="info-memo text-lg" id="home-recent-memo">최근 기록</div>
             <div class="info-location"><span class="material-symbols-outlined">location_on</span><span id="home-recent-location">위치 정보</span></div>
+            <!-- Uploader info -->
+            <div class="flex items-center gap-2 mt-2">
+              <div class="w-5 h-5 rounded-full bg-primary-container/30 flex items-center justify-center text-[10px] text-primary" id="home-recent-avatar">👤</div>
+              <span class="text-on-surface-variant text-body-sm" id="home-recent-uploader">업로더</span>
+            </div>
           </div>
         </section>
 
-        <!-- Stats Card - 동적 월별 차트 -->
+        <!-- Stats Card -->
         <section class="col-span-4 md:col-span-5 glass-surface rounded-lg p-card-padding flex flex-col justify-between">
           <div>
             <div class="flex justify-between items-center mb-6">
               <h3 class="font-title-md text-title-md text-primary">활동 통계</h3>
               <span class="material-symbols-outlined text-on-surface-variant">insights</span>
             </div>
-            <div class="flex items-end justify-between h-32 gap-2" id="home-stats-bars">
-              <!-- 동적으로 렌더링됨 -->
-            </div>
-            <div class="flex justify-between mt-2 text-[10px] text-on-surface-variant/50" id="home-stats-labels">
-              <!-- 동적으로 렌더링됨 -->
-            </div>
+            <div class="flex items-end justify-between h-32 gap-2" id="home-stats-bars"></div>
+            <div class="flex justify-between mt-2 text-[10px] text-on-surface-variant/50" id="home-stats-labels"></div>
           </div>
           <div class="mt-6 flex justify-between items-center text-body-sm text-on-surface-variant">
             <span id="home-stats-total">총 0개의 추억</span>
@@ -125,7 +252,7 @@
           </div>
         </section>
 
-        <!-- 🎲 랜덤 추억 카드 -->
+        <!-- 🎲 Random Memory Card -->
         <section class="col-span-4 md:col-span-6 timeline-card is-large fade-in group cursor-pointer" id="home-random-card" style="display:none;">
           <div class="timeline-card-photo">
             <img id="home-random-img" alt="랜덤 추억" src="" loading="lazy" />
@@ -153,7 +280,7 @@
           </div>
         </section>
 
-        <!-- 📊 월간 리캡 카드 -->
+        <!-- 📊 Monthly Recap Card -->
         <section class="col-span-4 md:col-span-6 glass-surface rounded-lg p-card-padding" id="home-recap-card" style="display:none;">
           <div class="flex items-center gap-3 mb-5">
             <div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center">
@@ -164,20 +291,17 @@
               <p class="text-body-sm text-on-surface-variant/70" id="home-recap-subtitle">활동 요약</p>
             </div>
           </div>
-          <!-- 이번 달 기록 수 및 증감 -->
           <div class="flex items-baseline gap-3 mb-5">
             <span class="text-display-lg font-display-lg text-primary leading-none" id="home-recap-count">0</span>
             <span class="text-on-surface-variant text-body-sm">개의 추억</span>
             <span class="text-body-sm font-medium px-2 py-0.5 rounded-full" id="home-recap-diff"></span>
           </div>
-          <!-- 인기 해시태그 -->
           <div class="mb-4">
             <p class="font-label-caps text-label-caps text-on-surface-variant/60 mb-2">인기 해시태그</p>
             <div class="flex gap-2 flex-wrap" id="home-recap-tags">
               <span class="text-on-surface-variant/50 text-body-sm">데이터 없음</span>
             </div>
           </div>
-          <!-- 자주 방문한 지역 -->
           <div>
             <p class="font-label-caps text-label-caps text-on-surface-variant/60 mb-2">자주 방문한 곳</p>
             <div class="flex gap-2 flex-wrap" id="home-recap-locations">
@@ -186,7 +310,7 @@
           </div>
         </section>
 
-        <!-- ══ On This Day Card (오늘의 추억) ══ -->
+        <!-- On This Day Card -->
         <section class="col-span-4 md:col-span-12 glass-surface rounded-lg p-card-padding relative overflow-hidden" id="home-onthisday-card" style="display:none;">
           <div class="flex items-center gap-3 mb-4">
             <div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center">
@@ -197,13 +321,11 @@
               <p class="text-body-sm text-on-surface-variant/70" id="home-onthisday-label">오늘과 같은 날의 기록</p>
             </div>
           </div>
-          <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar" id="home-onthisday-list">
-            <!-- Dynamically filled by JS -->
-          </div>
+          <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar" id="home-onthisday-list"></div>
           <div class="absolute top-0 right-0 w-48 h-48 bg-secondary/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
         </section>
 
-        <!-- 🏷️ 자동 해시태그 앨범 -->
+        <!-- Hashtag Albums -->
         <section class="col-span-4 md:col-span-12 glass-surface rounded-lg p-card-padding" id="home-albums-card" style="display:none;">
           <div class="flex items-center gap-3 mb-4">
             <div class="w-10 h-10 rounded-full bg-tertiary-container/20 flex items-center justify-center">
@@ -214,19 +336,17 @@
               <p class="text-body-sm text-on-surface-variant/70">자동으로 분류된 추억 모음</p>
             </div>
           </div>
-          <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar" id="home-albums-list">
-            <!-- Dynamically filled by JS -->
-          </div>
+          <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar" id="home-albums-list"></div>
         </section>
 
       </div>
     </div>
 
-    <!-- ══════════════ TIMELINE VIEW (screen7 - Liquid Bento Dashboard) ══════════════ -->
+    <!-- ══════════════ TIMELINE VIEW ══════════════ -->
     <div class="view-container" id="view-timeline">
       <div class="grid grid-cols-4 md:grid-cols-12 gap-grid-gutter">
 
-        <!-- Upload Card (Hidden by default since upload moved to bottom nav) -->
+        <!-- Upload Card -->
         <section class="col-span-4 md:col-span-12 hidden bento-card glass-surface glass-edge rounded-lg p-card-padding relative overflow-hidden group" id="upload-area">
           <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6" id="upload-content">
             <div>
@@ -243,22 +363,19 @@
             <span class="material-symbols-outlined text-primary-container text-4xl animate-pulse">hourglass_top</span>
             <p class="text-primary-container font-label-caps mt-4">EXIF 데이터 분석 중...</p>
           </div>
-          <!-- Liquid Gradient Shine -->
           <div class="absolute -inset-1 bg-gradient-to-r from-transparent via-primary-container/10 to-transparent blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
           <input type="file" accept="image/*, .heic, .heif" class="hidden" id="file-input" multiple />
         </section>
 
-        <!-- EXIF Panel (Bento Card) -->
+        <!-- EXIF Panel -->
         <section class="col-span-4 md:col-span-12 hidden" id="exif-panel">
           <div class="grid grid-cols-4 md:grid-cols-12 gap-grid-gutter">
-            <!-- Photo Preview & EXIF Details -->
             <div class="col-span-4 md:col-span-4 flex flex-col gap-grid-gutter">
               <div class="glass-surface glass-edge rounded-lg overflow-hidden">
                 <img id="exif-preview" class="w-full h-64 object-cover hidden" alt="업로드 미리보기" />
               </div>
               <div class="glass-surface glass-edge rounded-lg p-card-padding glow-cyan">
                 <div class="flex flex-col gap-6">
-                  <!-- 날짜 -->
                   <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
                       <span class="material-symbols-outlined text-primary-container">calendar_today</span>
@@ -270,7 +387,6 @@
                       </div>
                     </div>
                   </div>
-                  <!-- 주소 -->
                   <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
                       <span class="material-symbols-outlined text-primary-container">location_on</span>
@@ -282,7 +398,6 @@
                       </div>
                     </div>
                   </div>
-                  <!-- GPS -->
                   <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
                       <span class="material-symbols-outlined text-primary-container">explore</span>
@@ -295,7 +410,6 @@
                 </div>
               </div>
             </div>
-            <!-- Memo Input (screen9 style) -->
             <div class="col-span-4 md:col-span-8" id="memo-section">
               <div class="glass-surface glass-edge rounded-lg p-card-padding h-full">
                 <div class="flex items-center gap-3 mb-6">
@@ -318,14 +432,13 @@
           </div>
         </section>
 
-        <!-- Timeline Cards (Dynamically rendered by JS) -->
+        <!-- Timeline Cards -->
         <div class="col-span-4 md:col-span-12" id="timeline-cards-wrapper">
           <div class="flex flex-col gap-4 mb-6">
             <div class="flex justify-between items-center">
               <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">기록된 추억</h2>
               <span class="font-label-caps text-label-caps text-on-surface-variant" id="photo-count">최신순</span>
             </div>
-            <!-- ═══ Filter Bar ═══ -->
             <div class="flex gap-2 overflow-x-auto pb-1" id="filter-bar">
               <button class="filter-btn active" data-filter="all">전체</button>
               <button class="filter-btn" data-filter="favorite">⭐ 즐겨찾기</button>
@@ -334,7 +447,6 @@
               <button class="filter-btn" data-filter="year">올해</button>
               <button class="filter-btn" data-filter="location">장소별</button>
             </div>
-            <!-- 장소별 필터 드롭다운 (장소 선택 시 표시) -->
             <div class="hidden" id="location-filter-wrapper">
               <select id="location-filter-select" class="w-full bg-surface-container border border-white/20 rounded-lg px-4 py-3 text-on-surface text-body-sm focus:outline-none focus:border-primary-container/50 appearance-none cursor-pointer">
                 <option value="">전체 장소</option>
@@ -353,11 +465,10 @@
       </div>
     </div>
 
-    <!-- ══════════════ MAP VIEW (screen8 - Immersive Dark Map) ══════════════ -->
+    <!-- ══════════════ MAP VIEW ══════════════ -->
     <div class="view-container fixed inset-0 z-0 bg-surface flex flex-col pt-16 pb-20" id="view-map">
       <div id="map-container" class="flex-1 relative z-0 border-b border-white/5 shadow-xl bg-[#e5e5e5]"></div>
 
-      <!-- ══ Map Quick Filter Chips (top overlay) ══ -->
       <div class="absolute top-20 left-4 right-4 z-30 flex gap-2 overflow-x-auto hide-scrollbar pointer-events-auto" id="map-filter-chips">
         <button class="map-filter-chip active" data-map-filter="all">전체</button>
         <button class="map-filter-chip" data-map-filter="favorite">⭐ 즐겨찾기</button>
@@ -366,23 +477,18 @@
         <button class="map-filter-chip" data-map-filter="year">올해</button>
       </div>
 
-      <!-- ══ Map Control Buttons (right side) ══ -->
       <div class="absolute top-24 right-4 z-30 flex flex-col gap-3 pointer-events-auto">
-        <!-- Theme Switcher -->
         <button class="map-control-fab" id="map-btn-theme" title="지도 테마 변경">
           <span class="material-symbols-outlined text-lg">palette</span>
         </button>
-        <!-- Journey Polyline Toggle -->
         <button class="map-control-fab" id="map-btn-journey" title="여정 경로 표시">
           <span class="material-symbols-outlined text-lg">timeline</span>
         </button>
-        <!-- Heatmap Toggle -->
         <button class="map-control-fab" id="map-btn-heatmap" title="히트맵 모드">
           <span class="material-symbols-outlined text-lg">local_fire_department</span>
         </button>
       </div>
 
-      <!-- ══ Bottom Sheet (replaces popup) ══ -->
       <div class="map-bottom-sheet" id="map-bottom-sheet">
         <div class="map-bottom-sheet-handle"></div>
         <div class="flex gap-4 items-start">
@@ -401,10 +507,8 @@
         </div>
       </div>
 
-      <!-- Floating Bento Overlay (screen8 style) -->
       <div class="h-48 flex-shrink-0 px-6 pt-4 pb-2 z-20">
         <div class="flex flex-row gap-4 max-w-5xl mx-auto w-full overflow-x-auto pb-4 snap-x pointer-events-auto hide-scrollbar">
-        <!-- Stats Card -->
         <div class="flex-shrink-0 w-40 md:w-48 glass-surface p-card-padding rounded-[24px] glass-edge flex flex-col justify-between shadow-[0_8px_32px_rgba(0,0,0,0.6)] snap-center bg-[#0d1117]/60 backdrop-blur-xl border border-white/10">
           <div>
             <h2 class="text-label-caps font-label-caps text-primary-container/80 tracking-[0.2em] mb-1">촬영 위치</h2>
@@ -415,7 +519,6 @@
             <span class="text-body-sm font-body-sm text-on-surface-variant" id="map-region-label">전체 보기</span>
           </div>
         </div>
-        <!-- Highlight Photo -->
         <div class="flex-shrink-0 w-40 md:w-48 h-40 md:h-48 glass-surface p-1.5 rounded-[24px] glass-edge relative group cursor-pointer overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.6)] snap-center bg-[#0d1117]/60 backdrop-blur-xl border border-white/10" id="map-highlight-card" style="display:none;">
           <img class="w-full h-full object-cover rounded-[18px] group-hover:scale-110 transition-transform duration-700" id="map-highlight-img" alt="하이라이트" src="" />
           <div class="absolute inset-1.5 rounded-[18px] bg-gradient-to-t from-[#0d1117]/80 via-transparent to-transparent flex items-end p-4">
@@ -429,7 +532,6 @@
     <!-- ══════════════ CALENDAR VIEW ══════════════ -->
     <div class="view-container" id="view-calendar">
       <div class="max-w-2xl mx-auto pb-24">
-        <!-- Calendar Header -->
         <div class="flex items-center justify-between mb-6">
           <button class="w-10 h-10 rounded-full glass-surface flex items-center justify-center hover:bg-white/10 transition-colors" id="cal-prev">
             <span class="material-symbols-outlined text-on-surface-variant">chevron_left</span>
@@ -439,7 +541,6 @@
             <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
           </button>
         </div>
-        <!-- Weekday Header -->
         <div class="grid grid-cols-7 gap-1 mb-2">
           <div class="text-center text-label-caps font-label-caps text-error/80">일</div>
           <div class="text-center text-label-caps font-label-caps text-on-surface-variant/60">월</div>
@@ -449,14 +550,55 @@
           <div class="text-center text-label-caps font-label-caps text-on-surface-variant/60">금</div>
           <div class="text-center text-label-caps font-label-caps text-primary/60">토</div>
         </div>
-        <!-- Calendar Grid -->
-        <div class="grid grid-cols-7 gap-1" id="cal-grid">
-          <!-- Dynamically rendered -->
-        </div>
-        <!-- Selected Day Photos -->
+        <div class="grid grid-cols-7 gap-1" id="cal-grid"></div>
         <div class="mt-6" id="cal-day-photos" style="display:none;">
           <h3 class="font-title-md text-title-md text-primary mb-4" id="cal-day-title">선택된 날짜</h3>
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="cal-day-grid">
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="cal-day-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ALBUMS VIEW (NEW) ══════════════ -->
+    <div class="view-container" id="view-albums">
+      <div class="max-w-4xl mx-auto pb-24">
+        <!-- Albums Header -->
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">앨범</h2>
+            <p class="text-on-surface-variant text-body-sm mt-1">추억을 앨범으로 정리하세요</p>
+          </div>
+          <button class="px-5 py-2.5 rounded-xl bg-primary-container text-on-primary-container font-title-md text-sm hover:brightness-110 transition-all active:scale-95 flex items-center gap-2" id="album-create-btn">
+            <span class="material-symbols-outlined text-lg">add</span>
+            새 앨범
+          </button>
+        </div>
+
+        <!-- Albums Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="albums-grid">
+          <!-- Dynamically rendered -->
+        </div>
+
+        <!-- Albums Empty State -->
+        <div class="flex flex-col items-center justify-center py-24 text-center hidden" id="albums-empty">
+          <span class="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4">photo_album</span>
+          <p class="text-on-surface-variant/70 font-body-lg max-w-md">아직 만든 앨범이 없습니다.<br/>새 앨범을 만들어 추억을 정리해보세요!</p>
+        </div>
+
+        <!-- Album Detail View (shows when viewing a specific album) -->
+        <div class="hidden" id="album-detail-view">
+          <div class="flex items-center gap-4 mb-6">
+            <button class="w-10 h-10 rounded-full glass-surface flex items-center justify-center hover:bg-white/10 transition-colors" id="album-back-btn">
+              <span class="material-symbols-outlined text-on-surface-variant">arrow_back</span>
+            </button>
+            <div class="flex-1">
+              <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary" id="album-detail-name">앨범 이름</h2>
+              <p class="text-on-surface-variant text-body-sm" id="album-detail-desc">설명</p>
+            </div>
+            <button class="w-10 h-10 rounded-full glass-surface flex items-center justify-center hover:bg-white/10 transition-colors text-error" id="album-delete-btn" title="앨범 삭제">
+              <span class="material-symbols-outlined text-lg">delete</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" id="album-detail-grid">
             <!-- Dynamically rendered -->
           </div>
         </div>
@@ -465,29 +607,28 @@
 
   </main>
 
-  <!-- ══════════════ Bottom Navigation Bar (from STITCH screen7) ══════════════ -->
-  <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-2 pt-2 bg-white/5 backdrop-blur-xl border-t border-white/10 glass-edge shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
-    <!-- Home -->
+  <!-- ══════════════ Bottom Navigation Bar ══════════════ -->
+  <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-2 pt-2 bg-white/5 backdrop-blur-xl border-t border-white/10 glass-edge shadow-[0_-4px_24px_rgba(0,0,0,0.4)]" id="app-nav">
     <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-home" data-view="home">
       <span class="material-symbols-outlined text-xl">home</span>
       <span class="font-label-caps text-[10px] mt-0.5">홈</span>
     </a>
-    <!-- Timeline -->
     <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-timeline" data-view="timeline">
       <span class="material-symbols-outlined text-xl">auto_awesome_motion</span>
       <span class="font-label-caps text-[10px] mt-0.5">기록</span>
     </a>
-    <!-- Add (Upload) -->
     <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-add">
       <span class="material-symbols-outlined text-xl">add_circle</span>
       <span class="font-label-caps text-[10px] mt-0.5">추가</span>
     </a>
-    <!-- Calendar -->
+    <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-albums" data-view="albums">
+      <span class="material-symbols-outlined text-xl">photo_album</span>
+      <span class="font-label-caps text-[10px] mt-0.5">앨범</span>
+    </a>
     <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-calendar" data-view="calendar">
       <span class="material-symbols-outlined text-xl">calendar_month</span>
       <span class="font-label-caps text-[10px] mt-0.5">달력</span>
     </a>
-    <!-- Map -->
     <a class="nav-item flex flex-col items-center justify-center p-2 transition-all active:scale-90 duration-300 ease-out cursor-pointer" id="nav-map" data-view="map">
       <span class="material-symbols-outlined text-xl">map</span>
       <span class="font-label-caps text-[10px] mt-0.5">지도</span>
@@ -499,28 +640,84 @@
 
   <!-- ══════════════ Settings Modal ══════════════ -->
   <div class="photo-modal" id="settings-modal" aria-hidden="true">
-    <div class="glass-surface rounded-lg p-card-padding max-w-md mx-4 relative" style="background: rgba(25, 31, 49, 0.95);">
+    <div class="glass-surface rounded-lg p-card-padding max-w-md mx-4 relative max-h-[85vh] overflow-y-auto" style="background: rgba(25, 31, 49, 0.95); scrollbar-width: none;">
       <button class="absolute top-4 right-4 w-10 h-10 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center" id="settings-modal-close" aria-label="닫기">
         <span class="material-symbols-outlined text-on-surface-variant">close</span>
       </button>
-      <h2 class="font-headline-lg text-headline-lg text-primary mb-2 text-center">데이터 관리</h2>
-      <p class="text-body-sm text-on-surface-variant text-center mb-8">브라우저 스토리지를 초기화하면 데이터가 삭제됩니다.<br/>정기적으로 백업하세요.</p>
-      <button class="w-full py-4 rounded-full bg-primary-container text-on-primary-container font-title-md text-title-md hover:brightness-110 transition-all active:scale-95 cyan-glow mb-4 flex items-center justify-center gap-2" id="btn-export">
-        <span class="material-symbols-outlined">download</span> 전체 추억 백업하기
-      </button>
-      <div style="position:relative;">
-        <input type="file" id="import-input" accept=".json" class="hidden" />
-        <button class="w-full py-4 rounded-full glass-surface border border-white/20 text-on-surface-variant font-title-md text-title-md hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center gap-2" id="btn-import">
-          <span class="material-symbols-outlined">upload</span> 백업 파일 불러오기
-        </button>
+
+      <!-- Profile Section -->
+      <div class="text-center mb-6">
+        <div class="w-20 h-20 rounded-full bg-primary-container/20 flex items-center justify-center mx-auto mb-3">
+          <span class="material-symbols-outlined text-primary text-4xl">person</span>
+        </div>
+        <h2 class="font-headline-lg text-headline-lg text-primary mb-1" id="settings-nickname">닉네임</h2>
+        <p class="text-body-sm text-on-surface-variant" id="settings-email">email@example.com</p>
       </div>
+
+      <!-- Nickname Edit -->
+      <div class="glass-surface rounded-xl p-4 mb-4 border border-white/5">
+        <label class="font-label-caps text-label-caps text-on-surface-variant/70 mb-2 block">닉네임 변경</label>
+        <div class="flex gap-3">
+          <input type="text" id="settings-nickname-input" placeholder="새 닉네임" maxlength="20"
+            class="flex-1 bg-surface-container border border-white/20 rounded-lg px-3 py-2 text-on-surface text-body-sm focus:outline-none focus:border-primary/50" />
+          <button id="settings-nickname-save" class="px-4 py-2 rounded-lg bg-primary-container text-on-primary-container text-sm font-medium hover:brightness-110 transition-all active:scale-95">저장</button>
+        </div>
+      </div>
+
+      <!-- Family Section -->
+      <div class="glass-surface rounded-xl p-4 mb-4 border border-white/5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-title-md text-title-md text-white">가족 정보</h3>
+          <span class="material-symbols-outlined text-on-surface-variant text-lg">family_restroom</span>
+        </div>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="text-on-surface-variant text-body-sm">가족 이름</span>
+            <span class="text-white text-body-sm font-medium" id="settings-family-name">—</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-on-surface-variant text-body-sm">초대 코드</span>
+            <div class="flex items-center gap-2">
+              <span class="text-primary font-mono text-sm tracking-[0.2em]" id="settings-invite-code">—</span>
+              <button class="w-8 h-8 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center" id="settings-copy-code" title="코드 복사">
+                <span class="material-symbols-outlined text-on-surface-variant text-sm">content_copy</span>
+              </button>
+            </div>
+          </div>
+          <div>
+            <span class="text-on-surface-variant text-body-sm block mb-2">구성원</span>
+            <div class="flex flex-col gap-2" id="settings-members-list">
+              <!-- Dynamically filled -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Management -->
+      <div class="glass-surface rounded-xl p-4 mb-4 border border-white/5">
+        <h3 class="font-title-md text-title-md text-white mb-3">데이터 관리</h3>
+        <button class="w-full py-3 rounded-xl bg-primary-container text-on-primary-container font-title-md text-sm hover:brightness-110 transition-all active:scale-95 cyan-glow mb-3 flex items-center justify-center gap-2" id="btn-export">
+          <span class="material-symbols-outlined text-lg">download</span> 전체 추억 백업하기
+        </button>
+        <div style="position:relative;">
+          <input type="file" id="import-input" accept=".json" class="hidden" />
+          <button class="w-full py-3 rounded-xl glass-surface border border-white/20 text-on-surface-variant font-title-md text-sm hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center gap-2" id="btn-import">
+            <span class="material-symbols-outlined text-lg">upload</span> 백업 파일 불러오기
+          </button>
+        </div>
+      </div>
+
+      <!-- Logout -->
+      <button class="w-full py-3 rounded-xl border border-error/30 text-error font-title-md text-sm hover:bg-error/10 transition-all active:scale-95 flex items-center justify-center gap-2" id="btn-logout">
+        <span class="material-symbols-outlined text-lg">logout</span> 로그아웃
+      </button>
     </div>
   </div>
 
-  <!-- ══════════════ Photo Detail Modal (screen9 - Parallax Style) ══════════════ -->
+  <!-- ══════════════ Photo Detail Modal ══════════════ -->
   <div class="photo-modal" id="photo-modal" aria-hidden="true">
     <div class="max-w-3xl mx-4 w-full max-h-[90vh] overflow-y-auto rounded-lg" style="scrollbar-width:none;">
-      <!-- Parallax Hero (사진 분리) -->
+      <!-- Parallax Hero -->
       <div class="relative w-full overflow-hidden rounded-t-lg bg-black">
         <img id="photo-modal-img" src="" alt="확대된 사진" class="w-full max-h-[60vh] object-contain" />
         <div class="absolute top-4 right-4 z-10 flex gap-2">
@@ -538,15 +735,40 @@
           </button>
         </div>
       </div>
-      <!-- 사진 하단 타이틀 영역 -->
+      <!-- Title area -->
       <div class="bg-surface px-6 py-4 border-b border-white/5">
+        <!-- Uploader info -->
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center">
+            <span class="material-symbols-outlined text-primary text-sm">person</span>
+          </div>
+          <span class="text-on-surface-variant text-body-sm font-medium" id="photo-modal-uploader">업로더</span>
+          <span class="text-on-surface-variant/50 text-body-sm">•</span>
+          <span class="text-on-surface-variant/50 text-body-sm" id="photo-modal-time-ago">방금</span>
+        </div>
         <div class="inline-flex items-center px-3 py-1 rounded-full bg-primary-container/10 mb-2">
           <span class="material-symbols-outlined text-primary-container text-[14px] mr-1" style="font-variation-settings: 'FILL' 1;">photo_camera</span>
           <span class="font-label-caps text-[10px] text-primary tracking-widest" id="photo-modal-tag">MEMORY</span>
         </div>
         <h1 class="font-headline-lg text-headline-lg text-white" id="photo-modal-title">추억 상세</h1>
       </div>
-      <!-- Details Bento Grid (screen9 style) -->
+
+      <!-- Like & Comment Quick Bar -->
+      <div class="bg-surface px-6 py-3 border-b border-white/5 flex items-center gap-6">
+        <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-error transition-colors group" id="photo-modal-like-btn">
+          <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform" id="photo-modal-like-icon">favorite_border</span>
+          <span class="text-body-sm font-medium" id="photo-modal-like-count">0</span>
+        </button>
+        <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors" id="photo-modal-comment-toggle">
+          <span class="material-symbols-outlined text-xl">chat_bubble_outline</span>
+          <span class="text-body-sm font-medium" id="photo-modal-comment-count">0</span>
+        </button>
+        <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-secondary transition-colors ml-auto" id="photo-modal-add-to-album" title="앨범에 추가">
+          <span class="material-symbols-outlined text-xl">library_add</span>
+        </button>
+      </div>
+
+      <!-- Details Bento Grid -->
       <div class="bg-surface -mt-1 rounded-b-lg p-grid-margin">
         <div class="grid grid-cols-1 md:grid-cols-12 gap-grid-gutter">
           <!-- Details Card -->
@@ -573,7 +795,6 @@
                     <input type="text" class="hidden w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-sm mt-1" id="photo-modal-location-input" placeholder="장소를 입력하세요" />
                   </div>
                 </div>
-                <!-- 날씨 정보 -->
                 <div class="flex items-center gap-4" id="photo-modal-weather-row" style="display:none;">
                   <div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
                     <span class="material-symbols-outlined text-primary-container">cloud</span>
@@ -599,9 +820,61 @@
               <p class="font-body-lg text-body-lg text-on-surface leading-relaxed opacity-90 flex-1 whitespace-pre-wrap" id="photo-modal-memo">메모가 없습니다.</p>
               <textarea class="hidden w-full h-full min-h-[150px] bg-white/5 border border-white/10 rounded-lg p-4 text-white resize-none" id="photo-modal-memo-textarea" placeholder="추억을 메모해 보세요..."></textarea>
             </div>
+
+            <!-- Comments Section -->
+            <div class="glass-surface glass-edge rounded-lg p-card-padding mt-4" id="photo-modal-comments-section">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="material-symbols-outlined text-secondary">chat_bubble</span>
+                <h3 class="font-title-md text-title-md text-white">댓글</h3>
+              </div>
+              <div class="flex flex-col gap-3 max-h-64 overflow-y-auto mb-4" id="photo-modal-comments-list" style="scrollbar-width: thin;">
+                <!-- Dynamically filled -->
+              </div>
+              <div class="flex gap-3 items-end">
+                <input type="text" id="photo-modal-comment-input" placeholder="댓글을 입력하세요..." maxlength="300"
+                  class="flex-1 bg-surface-container border border-white/20 rounded-xl px-4 py-2.5 text-on-surface text-body-sm placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors" />
+                <button id="photo-modal-comment-submit" class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:brightness-110 transition-all active:scale-95 flex-shrink-0">
+                  <span class="material-symbols-outlined text-lg">send</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ Album Create Modal ══════════════ -->
+  <div class="photo-modal" id="album-create-modal" aria-hidden="true">
+    <div class="glass-surface rounded-2xl p-8 max-w-md mx-4 border border-white/10" style="background: rgba(25, 31, 49, 0.95);">
+      <h2 class="font-headline-lg text-headline-lg text-primary mb-6 text-center">새 앨범 만들기</h2>
+      <div class="flex flex-col gap-4">
+        <div>
+          <label class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1 block">앨범 이름</label>
+          <input type="text" id="album-name-input" placeholder="예: 여름 여행 2025" maxlength="50"
+            class="w-full bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors" />
+        </div>
+        <div>
+          <label class="font-label-caps text-label-caps text-on-surface-variant/70 mb-1 block">설명 (선택)</label>
+          <textarea id="album-desc-input" placeholder="앨범에 대한 설명..." maxlength="200" rows="3"
+            class="w-full bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors resize-none"></textarea>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button class="flex-1 py-3 rounded-xl glass-surface border border-white/20 text-on-surface-variant font-title-md text-sm hover:bg-white/10 transition-all active:scale-95" id="album-create-cancel">취소</button>
+        <button class="flex-1 py-3 rounded-xl bg-primary-container text-on-primary-container font-title-md text-sm hover:brightness-110 transition-all active:scale-95 cyan-glow" id="album-create-submit">만들기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ Add to Album Modal ══════════════ -->
+  <div class="photo-modal" id="add-to-album-modal" aria-hidden="true">
+    <div class="glass-surface rounded-2xl p-6 max-w-sm mx-4 border border-white/10" style="background: rgba(25, 31, 49, 0.95);">
+      <h3 class="font-title-md text-title-md text-white mb-4 text-center">앨범에 추가</h3>
+      <div class="flex flex-col gap-2 max-h-64 overflow-y-auto mb-4" id="add-to-album-list" style="scrollbar-width: thin;">
+        <!-- Dynamically filled -->
+      </div>
+      <button class="w-full py-2.5 rounded-xl glass-surface border border-white/20 text-on-surface-variant font-title-md text-sm hover:bg-white/10 transition-all active:scale-95" id="add-to-album-close">닫기</button>
     </div>
   </div>
 

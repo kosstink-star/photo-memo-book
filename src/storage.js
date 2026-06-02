@@ -1,78 +1,300 @@
-/**
- * storage.js - IndexedDB 저장소 모듈
- * 사진 Blob, EXIF 메타데이터, 사용자 메모를 로컬 PC 내에만 안전하게 보관합니다.
- */
-import { openDB } from 'idb';
+import { supabase } from './supabase.js';
 
-const DB_NAME = 'PhotoMemoDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'photos';
-
-/**
- * IndexedDB 인스턴스를 열거나 생성합니다.
- */
-function getDB() {
-  return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        store.createIndex('date', 'date', { unique: false });
-        store.createIndex('createdAt', 'createdAt', { unique: false });
-      }
-    },
+// Helper: resize image to max dimension, return blob
+async function resizeImage(file, maxDimension, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxDimension) { height = (height * maxDimension) / width; width = maxDimension; }
+        } else {
+          if (height > maxDimension) { width = (width * maxDimension) / height; height = maxDimension; }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Blob creation failed')), 'image/jpeg', quality);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
-/**
- * 사진 메모를 저장합니다.
- * @param {Object} photoData
- * @param {string} photoData.id - UUID
- * @param {Blob} photoData.imageBlob - 사진 원본 Blob
- * @param {string} photoData.thumbnailDataUrl - 리사이즈된 썸네일 (Base64 Data URL)
- * @param {string|null} photoData.date - 촬영 일시 (ISO 문자열)
- * @param {number|null} photoData.lat - 위도
- * @param {number|null} photoData.lng - 경도
- * @param {string} photoData.memo - 사용자 메모
- * @param {string} photoData.fileName - 원본 파일명
- * @param {number} photoData.createdAt - 저장 시각 타임스탬프
- */
-export async function savePhoto(photoData) {
-  const db = await getDB();
-  await db.put(STORE_NAME, photoData);
+// Helper: convert dataURL to File
+function dataURLtoFile(dataurl, filename) {
+  const arr = dataurl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while(n--) u8arr[n] = bstr.charCodeAt(n);
+  return new File([u8arr], filename, { type: mime });
 }
 
-/**
- * 모든 사진 메모를 날짜 역순(최신순)으로 가져옵니다.
- */
-export async function getAllPhotos() {
-  const db = await getDB();
-  const allPhotos = await db.getAll(STORE_NAME);
-  // 날짜 역순 정렬 (최신 → 과거)
-  return allPhotos.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+// Upload image to Supabase Storage and save metadata
+export async function savePhoto(photoData, familyId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const photoId = photoData.id || crypto.randomUUID();
+  
+  // Handle image upload - could be File, Blob, or dataURL
+  let imageFile, thumbFile;
+  
+  if (photoData.imageFile) {
+    // New upload - resize and upload
+    imageFile = await resizeImage(photoData.imageFile, 1200, 0.7);
+    thumbFile = await resizeImage(photoData.imageFile, 300, 0.6);
+  } else if (photoData.imageDataUrl) {
+    // Legacy format (base64 dataURL) - convert to file then resize
+    const tempFile = dataURLtoFile(photoData.imageDataUrl, 'photo.jpg');
+    imageFile = await resizeImage(tempFile, 1200, 0.7);
+    thumbFile = photoData.thumbnailDataUrl ? 
+      dataURLtoFile(photoData.thumbnailDataUrl, 'thumb.jpg') :
+      await resizeImage(tempFile, 300, 0.6);
+  }
+
+  let imageUrl = photoData.image_url;
+  let thumbnailUrl = photoData.thumbnail_url;
+
+  // Upload to storage if we have new files
+  if (imageFile) {
+    const imagePath = `${familyId}/${photoId}_full.jpg`;
+    const { error: imgErr } = await supabase.storage
+      .from('photos')
+      .upload(imagePath, imageFile, { contentType: 'image/jpeg', upsert: true });
+    if (imgErr) throw imgErr;
+    const { data: imgUrl } = supabase.storage.from('photos').getPublicUrl(imagePath);
+    imageUrl = imgUrl.publicUrl;
+  }
+
+  if (thumbFile) {
+    const thumbPath = `${familyId}/${photoId}_thumb.jpg`;
+    const { error: thumbErr } = await supabase.storage
+      .from('photos')
+      .upload(thumbPath, thumbFile, { contentType: 'image/jpeg', upsert: true });
+    if (thumbErr) throw thumbErr;
+    const { data: thumbUrl } = supabase.storage.from('photos').getPublicUrl(thumbPath);
+    thumbnailUrl = thumbUrl.publicUrl;
+  }
+
+  // Extract hashtags from memo
+  const hashtags = (photoData.memo || '').match(/#[A-Za-z0-9가-힣_]+/g) || [];
+
+  // Upsert photo metadata
+  const record = {
+    id: photoId,
+    family_id: familyId,
+    uploaded_by: user.id,
+    image_url: imageUrl,
+    thumbnail_url: thumbnailUrl,
+    date: photoData.date || null,
+    lat: photoData.lat || null,
+    lng: photoData.lng || null,
+    address: photoData.address || null,
+    memo: photoData.memo || '',
+    file_name: photoData.fileName || photoData.file_name || '',
+    weather: photoData.weather || null,
+    hashtags,
+    favorite: photoData.favorite || false,
+  };
+
+  const { data, error } = await supabase
+    .from('photos')
+    .upsert(record)
+    .select(`
+      *,
+      uploader:uploaded_by(nickname, avatar_url),
+      photo_likes(count),
+      photo_comments(count)
+    `)
+    .single();
+  if (error) throw error;
+  return data;
 }
 
-/**
- * 특정 사진 메모를 가져옵니다.
- * @param {string} id
- */
+// Get all photos for a family
+export async function getAllPhotos(familyId) {
+  const { data, error } = await supabase
+    .from('photos')
+    .select(`
+      *,
+      uploader:uploaded_by(nickname, avatar_url),
+      photo_likes(count),
+      photo_comments(count)
+    `)
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  
+  // Transform for backward compat
+  return data.map(p => ({
+    ...p,
+    thumbnailDataUrl: p.thumbnail_url,
+    imageDataUrl: p.image_url,
+    createdAt: new Date(p.created_at).getTime(),
+    likesCount: p.photo_likes?.[0]?.count || 0,
+    commentsCount: p.photo_comments?.[0]?.count || 0,
+    uploaderNickname: p.uploader?.nickname || '알 수 없음',
+    uploaderAvatar: p.uploader?.avatar_url,
+  }));
+}
+
+// Get single photo
 export async function getPhoto(id) {
-  const db = await getDB();
-  return db.get(STORE_NAME, id);
+  const { data, error } = await supabase
+    .from('photos')
+    .select(`
+      *,
+      uploader:uploaded_by(nickname, avatar_url),
+      photo_likes(count),
+      photo_comments(count)
+    `)
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return {
+    ...data,
+    thumbnailDataUrl: data.thumbnail_url,
+    imageDataUrl: data.image_url,
+    createdAt: new Date(data.created_at).getTime(),
+    likesCount: data.photo_likes?.[0]?.count || 0,
+    commentsCount: data.photo_comments?.[0]?.count || 0,
+    uploaderNickname: data.uploader?.nickname || '알 수 없음',
+    uploaderAvatar: data.uploader?.avatar_url,
+  };
 }
 
-/**
- * 특정 사진 메모를 삭제합니다.
- * @param {string} id
- */
-export async function deletePhoto(id) {
-  const db = await getDB();
-  await db.delete(STORE_NAME, id);
+// Delete photo (removes storage files too)
+export async function deletePhoto(id, familyId) {
+  // Delete storage files
+  await supabase.storage.from('photos').remove([
+    `${familyId}/${id}_full.jpg`,
+    `${familyId}/${id}_thumb.jpg`,
+  ]);
+  
+  const { error } = await supabase.from('photos').delete().eq('id', id);
+  if (error) throw error;
 }
 
-/**
- * 사진 개수를 반환합니다.
- */
-export async function getPhotoCount() {
-  const db = await getDB();
-  return db.count(STORE_NAME);
+// Get photo count for a family
+export async function getPhotoCount(familyId) {
+  const { count, error } = await supabase
+    .from('photos')
+    .select('*', { count: 'exact', head: true })
+    .eq('family_id', familyId);
+  if (error) throw error;
+  return count;
+}
+
+// Update photo metadata only (no image re-upload)
+export async function updatePhoto(id, updates) {
+  // Re-extract hashtags if memo changed
+  if (updates.memo !== undefined) {
+    updates.hashtags = (updates.memo || '').match(/#[A-Za-z0-9가-힣_]+/g) || [];
+  }
+  
+  const { data, error } = await supabase
+    .from('photos')
+    .update(updates)
+    .eq('id', id)
+    .select(`
+      *,
+      uploader:uploaded_by(nickname, avatar_url),
+      photo_likes(count),
+      photo_comments(count)
+    `)
+    .single();
+  if (error) throw error;
+  return {
+    ...data,
+    thumbnailDataUrl: data.thumbnail_url,
+    imageDataUrl: data.image_url,
+    createdAt: new Date(data.created_at).getTime(),
+    likesCount: data.photo_likes?.[0]?.count || 0,
+    commentsCount: data.photo_comments?.[0]?.count || 0,
+    uploaderNickname: data.uploader?.nickname || '알 수 없음',
+    uploaderAvatar: data.uploader?.avatar_url,
+  };
+}
+
+// ── Likes ──
+export async function likePhoto(photoId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  const { error } = await supabase
+    .from('photo_likes')
+    .insert({ photo_id: photoId, user_id: user.id });
+  if (error && error.code !== '23505') throw error; // ignore duplicate
+}
+
+export async function unlikePhoto(photoId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  const { error } = await supabase
+    .from('photo_likes')
+    .delete()
+    .eq('photo_id', photoId)
+    .eq('user_id', user.id);
+  if (error) throw error;
+}
+
+export async function getPhotoLikes(photoId) {
+  const { data, error } = await supabase
+    .from('photo_likes')
+    .select('*, user:user_id(nickname, avatar_url)')
+    .eq('photo_id', photoId);
+  if (error) throw error;
+  return data;
+}
+
+export async function hasUserLiked(photoId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from('photo_likes')
+    .select('id')
+    .eq('photo_id', photoId)
+    .eq('user_id', user.id)
+    .single();
+  return !!data;
+}
+
+// ── Comments ──
+export async function addComment(photoId, content) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  const { data, error } = await supabase
+    .from('photo_comments')
+    .insert({ photo_id: photoId, user_id: user.id, content })
+    .select('*, user:user_id(nickname, avatar_url)')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getComments(photoId) {
+  const { data, error } = await supabase
+    .from('photo_comments')
+    .select('*, user:user_id(nickname, avatar_url)')
+    .eq('photo_id', photoId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteComment(commentId) {
+  const { error } = await supabase
+    .from('photo_comments')
+    .delete()
+    .eq('id', commentId);
+  if (error) throw error;
 }
