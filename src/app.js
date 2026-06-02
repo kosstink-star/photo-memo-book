@@ -936,4 +936,8 @@ function updateHomeView() {
 }
 function renderCalendar() {} // Omitted for brevity in rewrite
 
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
