@@ -92,7 +92,7 @@ export async function savePhoto(photoData, familyId) {
   // Upsert photo metadata
   const record = {
     id: photoId,
-    family_id: familyId,
+    family_id: familyId || photoData.family_id,
     uploaded_by: user.id,
     image_url: imageUrl,
     thumbnail_url: thumbnailUrl,
