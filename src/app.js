@@ -168,6 +168,11 @@ const settingsModalClose = document.getElementById('settings-modal-close');
 const photoModal = document.getElementById('photo-modal');
 const photoModalClose = document.getElementById('photo-modal-close');
 const photoModalDelete = document.getElementById('photo-modal-delete');
+const photoModalImg = document.getElementById('photo-modal-img');
+const photoModalDate = document.getElementById('photo-modal-date');
+const photoModalTitle = document.getElementById('photo-modal-title');
+const photoModalLocation = document.getElementById('photo-modal-location');
+const photoModalMemo = document.getElementById('photo-modal-memo');
 const albumCreateModal = document.getElementById('album-create-modal');
 const addToAlbumModal = document.getElementById('add-to-album-modal');
 
