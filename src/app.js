@@ -173,6 +173,11 @@ const photoModalDate = document.getElementById('photo-modal-date');
 const photoModalTitle = document.getElementById('photo-modal-title');
 const photoModalLocation = document.getElementById('photo-modal-location');
 const photoModalMemo = document.getElementById('photo-modal-memo');
+const photoModalEdit = document.getElementById('photo-modal-edit');
+const photoModalFavorite = document.getElementById('photo-modal-favorite');
+const photoModalExport = document.getElementById('photo-modal-export');
+const photoModalMemoTextarea = document.getElementById('photo-modal-memo-textarea');
+const photoModalSaveBtn = document.getElementById('photo-modal-save-btn');
 const albumCreateModal = document.getElementById('album-create-modal');
 const addToAlbumModal = document.getElementById('add-to-album-modal');
 
@@ -567,6 +572,87 @@ function setupEventListeners() {
     });
   }
 
+  if (photoModalEdit && photoModalMemoTextarea && photoModalSaveBtn && photoModalMemo) {
+    photoModalEdit.addEventListener('click', () => {
+      if (!currentEditingPhoto) return;
+      photoModalMemo.classList.add('hidden');
+      photoModalMemoTextarea.classList.remove('hidden');
+      photoModalSaveBtn.classList.remove('hidden');
+      photoModalMemoTextarea.value = currentEditingPhoto.memo || '';
+      photoModalMemoTextarea.focus();
+    });
+
+    photoModalSaveBtn.addEventListener('click', async () => {
+      if (!currentEditingPhoto) return;
+      const newMemo = photoModalMemoTextarea.value.trim();
+      try {
+        const updatedPhoto = await updatePhoto(currentEditingPhoto.id, { memo: newMemo });
+        currentEditingPhoto.memo = newMemo;
+        const cached = allPhotosCache.find(p => p.id === currentEditingPhoto.id);
+        if (cached) cached.memo = newMemo;
+        
+        photoModalMemo.innerHTML = formatHashtags(newMemo) || '메모 없음';
+        photoModalMemo.classList.remove('hidden');
+        photoModalMemoTextarea.classList.add('hidden');
+        photoModalSaveBtn.classList.add('hidden');
+        
+        renderTimeline();
+        showToast('메모가 수정되었습니다.');
+      } catch (e) {
+        showToast('메모 수정 실패: ' + (e?.message || ''));
+      }
+    });
+  }
+
+  if (photoModalFavorite) {
+    photoModalFavorite.addEventListener('click', async () => {
+      if (!currentEditingPhoto) return;
+      const newVal = !currentEditingPhoto.favorite;
+      try {
+        await updatePhoto(currentEditingPhoto.id, { favorite: newVal });
+        currentEditingPhoto.favorite = newVal;
+        const cached = allPhotosCache.find(p => p.id === currentEditingPhoto.id);
+        if (cached) cached.favorite = newVal;
+        
+        const icon = photoModalFavorite.querySelector('span');
+        if (icon) {
+          icon.style.fontVariationSettings = newVal ? "'FILL' 1" : "'FILL' 0";
+          icon.style.color = newVal ? "#FFD700" : "";
+        }
+        renderTimeline();
+        showToast(newVal ? '즐겨찾기에 추가되었습니다.' : '즐겨찾기에서 제거되었습니다.');
+      } catch (e) {
+        showToast('즐겨찾기 변경 실패');
+      }
+    });
+  }
+
+  if (photoModalExport) {
+    photoModalExport.addEventListener('click', async () => {
+      if (!currentEditingPhoto) return;
+      const url = currentEditingPhoto.image_url || currentEditingPhoto.imageDataUrl;
+      if (!url) return showToast('다운로드할 이미지가 없습니다.');
+      
+      try {
+        showToast('다운로드를 시작합니다...');
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = currentEditingPhoto.file_name || 'photo.jpg';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(blobUrl);
+      } catch (e) {
+        console.error(e);
+        // Fallback for cross-origin issues
+        window.open(url, '_blank');
+      }
+    });
+  }
+
   // Albums
   albumCreateBtn.addEventListener('click', () => {
     document.getElementById('album-name-input').value = '';
@@ -825,6 +911,21 @@ async function openPhotoModal(photo) {
     const uploader = familyMembers.find(m => m.user_id === photo.uploaded_by)?.profiles;
     document.getElementById('photo-modal-uploader').textContent = uploader?.nickname || '사용자';
     
+    if (photoModalFavorite) {
+      const icon = photoModalFavorite.querySelector('span');
+      if (icon) {
+        icon.style.fontVariationSettings = photo.favorite ? "'FILL' 1" : "'FILL' 0";
+        icon.style.color = photo.favorite ? "#FFD700" : "";
+      }
+    }
+    
+    // Reset edit mode if it was left open
+    if (photoModalMemo && photoModalMemoTextarea && photoModalSaveBtn) {
+      photoModalMemo.classList.remove('hidden');
+      photoModalMemoTextarea.classList.add('hidden');
+      photoModalSaveBtn.classList.add('hidden');
+    }
+
     try {
       // Likes status
       const liked = await hasUserLiked(photo.id, currentUser.id);
@@ -872,12 +973,13 @@ async function loadComments(photoId) {
     
     list.innerHTML = comments.map(c => {
       const isMine = c.user_id === currentUser.id;
+      const authorProfile = familyMembers.find(m => m.user_id === c.user_id)?.profiles || { nickname: '사용자', avatar_url: null };
       return `
         <div class="comment-item">
-          <div class="comment-avatar">${generateAvatarHtml(c.profiles, 'small')}</div>
+          <div class="comment-avatar">${generateAvatarHtml(authorProfile, 'small')}</div>
           <div class="comment-body">
             <div class="comment-header">
-              <span class="comment-author">${c.profiles.nickname}</span>
+              <span class="comment-author">${authorProfile.nickname}</span>
               <span class="comment-time">${formatDateShort(c.created_at)}</span>
               ${isMine ? `<button class="comment-delete" data-cid="${c.id}"><span class="material-symbols-outlined text-[14px]">delete</span></button>` : ''}
             </div>

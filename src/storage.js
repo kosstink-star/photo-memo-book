@@ -283,7 +283,7 @@ export async function addComment(photoId, content) {
   const { data, error } = await supabase
     .from('photo_comments')
     .insert({ photo_id: photoId, user_id: user.id, content })
-    .select('*, user:user_id(nickname, avatar_url)')
+    .select('*')
     .single();
   if (error) throw error;
   return data;
@@ -292,7 +292,7 @@ export async function addComment(photoId, content) {
 export async function getComments(photoId) {
   const { data, error } = await supabase
     .from('photo_comments')
-    .select('*, user:user_id(nickname, avatar_url)')
+    .select('*')
     .eq('photo_id', photoId)
     .order('created_at', { ascending: true });
   if (error) throw error;
