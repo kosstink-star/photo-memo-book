@@ -871,15 +871,14 @@ async function renderAlbumsView() {
     albumsEmpty.classList.add('hidden');
     
     albumsGrid.innerHTML = albums.map(album => {
-      const cover = album.cover_photo?.thumbnail_url || '';
       return `
         <div class="album-grid-card" data-aid="${album.id}">
-          ${cover ? `<img src="${cover}" />` : '<div class="album-grid-empty-icon"><span class="material-symbols-outlined text-4xl text-white/20">photo_library</span></div>'}
+          <div class="album-grid-empty-icon"><span class="material-symbols-outlined text-4xl text-white/20">photo_library</span></div>
           <div class="album-grid-overlay">
             <h3 class="album-grid-name">${album.name}</h3>
             <div class="album-grid-meta">
               <span class="material-symbols-outlined text-[14px]">photo_library</span>
-              ${album.album_photos?.[0]?.count || 0}장
+              ${album.description || ''}
             </div>
           </div>
         </div>
@@ -891,6 +890,7 @@ async function renderAlbumsView() {
     });
   } catch (e) {
     console.error('Albums error:', e);
+    showToast('앨범 불러오기 실패: ' + (e?.message || ''));
   }
 }
 
@@ -905,37 +905,207 @@ async function openAlbumDetail(albumId, albumsList) {
   albumsGrid.classList.add('hidden');
   albumDetailView.classList.remove('hidden');
   
-  const photos = await getAlbumPhotos(albumId);
-  albumDetailGrid.innerHTML = photos.map(photo => `
-    <div class="timeline-card-photo rounded-lg cursor-pointer" data-pid="${photo.id}">
-      <img src="${photo.thumbnail_url || photo.thumbnailDataUrl}" class="w-full aspect-square object-cover rounded-lg" />
-    </div>
-  `).join('');
-  
-  albumDetailGrid.querySelectorAll('[data-pid]').forEach(el => {
-    el.addEventListener('click', () => {
-      const p = allPhotosCache.find(x => x.id === el.dataset.pid);
-      if(p) openPhotoModal(p);
+  try {
+    const photos = await getAlbumPhotos(albumId);
+    albumDetailGrid.innerHTML = photos.map(photo => `
+      <div class="timeline-card-photo rounded-lg cursor-pointer" data-pid="${photo.id}">
+        <img src="${photo.thumbnail_url || photo.thumbnailDataUrl}" class="w-full aspect-square object-cover rounded-lg" />
+      </div>
+    `).join('');
+    
+    albumDetailGrid.querySelectorAll('[data-pid]').forEach(el => {
+      el.addEventListener('click', () => {
+        const p = allPhotosCache.find(x => x.id === el.dataset.pid);
+        if(p) openPhotoModal(p);
+      });
     });
-  });
+  } catch(e) {
+    console.error('Album detail error:', e);
+    showToast('앨범 사진 불러오기 실패');
+  }
 }
 
 // ──────────────────────────────────────
-// Map & Calendar Stubs
+// Map & Calendar
 // ──────────────────────────────────────
 function refreshMapMarkers() {
   if(mapInitialized) renderMarkers(allPhotosCache);
 }
+
 function updateHomeView() {
   homeTotalCount.textContent = allPhotosCache.length;
+  homeStatsTotal.textContent = `총 ${allPhotosCache.length}개의 추억`;
+  
   const recent = allPhotosCache[0];
   if (recent) {
     homeRecentCard.style.display = '';
     homeRecentImg.src = recent.thumbnail_url || recent.thumbnailDataUrl;
     homeRecentMemo.textContent = recent.memo || '최근 기록';
+    homeRecentDate.textContent = formatDateShort(recent.date || recent.created_at) || '';
+    homeRecentLocation.textContent = recent.address || '위치 미상';
+  }
+  
+  // Random photo
+  if (allPhotosCache.length > 0) {
+    const rand = allPhotosCache[Math.floor(Math.random() * allPhotosCache.length)];
+    homeRandomCard.style.display = '';
+    homeRandomImg.src = rand.thumbnail_url || rand.thumbnailDataUrl;
+    homeRandomMemo.textContent = rand.memo || '';
+    homeRandomDate.textContent = formatDateShort(rand.date || rand.created_at) || '';
+    homeRandomLocation.textContent = rand.address || '위치 미상';
+    currentRandomPhoto = rand;
+  }
+  
+  // Monthly stats bars
+  renderMonthlyStats();
+  
+  // On this day
+  renderOnThisDay();
+}
+
+function renderMonthlyStats() {
+  const months = Array(6).fill(0);
+  const labels = [];
+  const now = new Date();
+  
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    labels.push(d.toLocaleDateString('ko-KR', { month: 'short' }));
+  }
+  
+  allPhotosCache.forEach(p => {
+    const pd = new Date(p.date || p.created_at);
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const dEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      if (pd >= d && pd <= dEnd) {
+        months[5 - i]++;
+        break;
+      }
+    }
+  });
+  
+  const max = Math.max(...months, 1);
+  homeStatsBars.innerHTML = months.map((c, i) => {
+    const h = Math.max((c / max) * 100, 4);
+    return `<div class="flex-1 flex flex-col items-center justify-end">
+      <span class="text-[10px] text-primary mb-1">${c}</span>
+      <div class="w-full rounded-full bg-primary/30" style="height: ${h}%">
+        <div class="w-full h-full rounded-full bg-primary"></div>
+      </div>
+    </div>`;
+  }).join('');
+  homeStatsLabels.innerHTML = labels.map(l => `<span>${l}</span>`).join('');
+}
+
+function renderOnThisDay() {
+  const today = new Date();
+  const mm = today.getMonth();
+  const dd = today.getDate();
+  
+  const matches = allPhotosCache.filter(p => {
+    const pd = new Date(p.date || p.created_at);
+    return pd.getMonth() === mm && pd.getDate() === dd && pd.getFullYear() !== today.getFullYear();
+  });
+  
+  if (matches.length > 0) {
+    homeOnthisdayCard.style.display = '';
+    homeOnthisdayLabel.textContent = `${today.getMonth() + 1}월 ${today.getDate()}일의 추억 (${matches.length}건)`;
+    homeOnthisdayList.innerHTML = matches.map(p => `
+      <div class="flex-shrink-0 w-32 cursor-pointer" data-oid="${p.id}">
+        <img src="${p.thumbnail_url || p.thumbnailDataUrl}" class="w-32 h-32 rounded-xl object-cover border border-white/10" />
+        <p class="text-[11px] text-on-surface-variant mt-1 truncate">${p.memo || formatDateShort(p.date)}</p>
+      </div>
+    `).join('');
   }
 }
-function renderCalendar() {} // Omitted for brevity in rewrite
+
+function renderCalendar() {
+  const year = calYear;
+  const month = calMonth;
+  calTitle.textContent = `${year}년 ${month + 1}월`;
+  
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  // Build photo count per day
+  const photoDays = {};
+  allPhotosCache.forEach(p => {
+    const pd = new Date(p.date || p.created_at);
+    if (pd.getFullYear() === year && pd.getMonth() === month) {
+      const day = pd.getDate();
+      photoDays[day] = (photoDays[day] || 0) + 1;
+    }
+  });
+  
+  let html = '';
+  // Empty cells before first day
+  for (let i = 0; i < firstDay; i++) {
+    html += '<div class="cal-cell empty"></div>';
+  }
+  
+  const today = new Date();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const count = photoDays[d] || 0;
+    const isToday = year === today.getFullYear() && month === today.getMonth() && d === today.getDate();
+    const isSelected = calSelectedDate === d;
+    const hasPhotos = count > 0;
+    
+    html += `
+      <div class="cal-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${hasPhotos ? 'has-photos' : ''}" 
+           data-day="${d}" style="cursor: ${hasPhotos ? 'pointer' : 'default'}">
+        <span class="cal-day-num ${isToday ? 'text-primary font-bold' : 'text-on-surface-variant'}">${d}</span>
+        ${hasPhotos ? `<div class="cal-dot"></div>` : ''}
+      </div>
+    `;
+  }
+  
+  calGrid.innerHTML = html;
+  
+  // Click handlers
+  calGrid.querySelectorAll('.cal-cell[data-day]').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const day = parseInt(cell.dataset.day);
+      calSelectedDate = day;
+      renderCalendar();
+      showDayPhotos(year, month, day);
+    });
+  });
+  
+  // Nav buttons
+  calPrev.onclick = () => { calMonth--; if(calMonth < 0) { calMonth = 11; calYear--; } calSelectedDate = null; renderCalendar(); calDayPhotos.style.display = 'none'; };
+  calNext.onclick = () => { calMonth++; if(calMonth > 11) { calMonth = 0; calYear++; } calSelectedDate = null; renderCalendar(); calDayPhotos.style.display = 'none'; };
+}
+
+function showDayPhotos(year, month, day) {
+  const photos = allPhotosCache.filter(p => {
+    const pd = new Date(p.date || p.created_at);
+    return pd.getFullYear() === year && pd.getMonth() === month && pd.getDate() === day;
+  });
+  
+  if (photos.length === 0) {
+    calDayPhotos.style.display = 'none';
+    return;
+  }
+  
+  calDayPhotos.style.display = '';
+  calDayTitle.textContent = `${year}년 ${month + 1}월 ${day}일 (${photos.length}장)`;
+  calDayGrid.innerHTML = photos.map(p => `
+    <div class="cursor-pointer rounded-xl overflow-hidden border border-white/10" data-cpid="${p.id}">
+      <img src="${p.thumbnail_url || p.thumbnailDataUrl}" class="w-full aspect-square object-cover" />
+      <div class="p-2 bg-surface-container">
+        <p class="text-body-sm text-on-surface-variant truncate">${p.memo || '메모 없음'}</p>
+      </div>
+    </div>
+  `).join('');
+  
+  calDayGrid.querySelectorAll('[data-cpid]').forEach(el => {
+    el.addEventListener('click', () => {
+      const photo = allPhotosCache.find(x => x.id === el.dataset.cpid);
+      if(photo) openPhotoModal(photo);
+    });
+  });
+}
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);

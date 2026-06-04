@@ -18,12 +18,7 @@ export async function createAlbum(familyId, name, description = '') {
 export async function getAlbums(familyId) {
   const { data, error } = await supabase
     .from('albums')
-    .select(`
-      *,
-      cover_photo:cover_photo_id(id, thumbnail_url),
-      album_photos(count),
-      creator:created_by(nickname)
-    `)
+    .select('*')
     .eq('family_id', familyId)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -34,19 +29,25 @@ export async function getAlbums(familyId) {
 export async function getAlbumPhotos(albumId) {
   const { data, error } = await supabase
     .from('album_photos')
-    .select(`
-      added_at,
-      photos:photo_id(
-        *,
-        uploader:uploaded_by(nickname, avatar_url),
-        photo_likes(count),
-        photo_comments(count)
-      )
-    `)
+    .select('added_at, photo_id')
     .eq('album_id', albumId)
     .order('added_at', { ascending: false });
   if (error) throw error;
-  return data.map(ap => ({ ...ap.photos, added_at: ap.added_at }));
+
+  if (data.length === 0) return [];
+
+  const photoIds = data.map(ap => ap.photo_id);
+  const { data: photos, error: photosError } = await supabase
+    .from('photos')
+    .select('*')
+    .in('id', photoIds);
+  if (photosError) throw photosError;
+
+  return photos.map(p => ({
+    ...p,
+    thumbnailDataUrl: p.thumbnail_url,
+    imageDataUrl: p.image_url,
+  }));
 }
 
 // Add photo to album
@@ -100,8 +101,17 @@ export async function setAlbumCover(albumId, photoId) {
 export async function getPhotoAlbums(photoId) {
   const { data, error } = await supabase
     .from('album_photos')
-    .select('album_id, albums:album_id(id, name)')
+    .select('album_id')
     .eq('photo_id', photoId);
   if (error) throw error;
-  return data.map(ap => ap.albums);
+
+  if (data.length === 0) return [];
+
+  const albumIds = data.map(ap => ap.album_id);
+  const { data: albums, error: albumsError } = await supabase
+    .from('albums')
+    .select('id, name')
+    .in('id', albumIds);
+  if (albumsError) throw albumsError;
+  return albums;
 }
