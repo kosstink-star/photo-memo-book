@@ -180,6 +180,8 @@ const photoModalMemoTextarea = document.getElementById('photo-modal-memo-textare
 const photoModalSaveBtn = document.getElementById('photo-modal-save-btn');
 const albumCreateModal = document.getElementById('album-create-modal');
 const addToAlbumModal = document.getElementById('add-to-album-modal');
+const addToAlbumList = document.getElementById('add-to-album-list');
+const photoModalAddToAlbum = document.getElementById('photo-modal-add-to-album');
 
 // Settings Elements
 const settingsNickname = document.getElementById('settings-nickname');
@@ -213,6 +215,8 @@ let currentEditingPhoto = null;
 let currentMapFilter = 'all';
 let currentRandomPhoto = null;
 let currentAlbumView = null;
+let currentTimelineFilter = 'all';
+let currentTimelineLocation = '';
 
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
@@ -501,6 +505,86 @@ function setupEventListeners() {
   homeGotoTimeline?.addEventListener('click', () => switchView('timeline'));
   homeUploadBtn?.addEventListener('click', () => { switchView('timeline'); fileInput.click(); });
 
+  // Timeline Filters
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      currentTimelineFilter = e.target.dataset.filter;
+      
+      const locWrapper = document.getElementById('location-filter-wrapper');
+      if (currentTimelineFilter === 'location') {
+        locWrapper.classList.remove('hidden');
+        populateLocationFilter();
+      } else {
+        locWrapper.classList.add('hidden');
+        currentTimelineLocation = '';
+      }
+      renderTimeline();
+    });
+  });
+
+  const locSelect = document.getElementById('location-filter-select');
+  if (locSelect) {
+    locSelect.addEventListener('change', (e) => {
+      currentTimelineLocation = e.target.value;
+      renderTimeline();
+    });
+  }
+
+  // Map Controls
+  if (mapBtnTheme) {
+    mapBtnTheme.addEventListener('click', () => {
+      cycleMapTheme();
+    });
+  }
+  if (mapBtnJourney) {
+    mapBtnJourney.addEventListener('click', () => {
+      const isLine = toggleJourneyLine();
+      mapBtnJourney.classList.toggle('active', isLine);
+    });
+  }
+  if (mapBtnHeatmap) {
+    mapBtnHeatmap.addEventListener('click', () => {
+      const isHeat = toggleHeatmap();
+      mapBtnHeatmap.classList.toggle('active', isHeat);
+    });
+  }
+  if (mapFilterChips) {
+    mapFilterChips.querySelectorAll('.map-filter-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        mapFilterChips.querySelectorAll('.map-filter-chip').forEach(c => c.classList.remove('active'));
+        e.target.classList.add('active');
+        currentMapFilter = e.target.dataset.mapFilter;
+        refreshMapMarkers();
+      });
+    });
+  }
+
+  // Albums UI
+  if (albumBackBtn) {
+    albumBackBtn.addEventListener('click', () => {
+      currentAlbumView = null;
+      document.getElementById('album-detail-view').classList.add('hidden');
+      document.getElementById('albums-grid').classList.remove('hidden');
+    });
+  }
+  if (albumDeleteBtn) {
+    albumDeleteBtn.addEventListener('click', async () => {
+      if (!currentAlbumView) return;
+      if (!confirm('이 앨범을 삭제하시겠습니까? (사진은 삭제되지 않습니다)')) return;
+      try {
+        await deleteAlbum(currentAlbumView.id);
+        showToast('앨범이 삭제되었습니다.');
+        currentAlbumView = null;
+        document.getElementById('album-detail-view').classList.add('hidden');
+        renderAlbumsView();
+      } catch (e) {
+        showToast('앨범 삭제 중 오류가 발생했습니다.');
+      }
+    });
+  }
+
   // Settings
   document.getElementById('btn-settings').addEventListener('click', () => {
     settingsModal.classList.add('active');
@@ -691,14 +775,46 @@ function setupEventListeners() {
     const content = input.value.trim();
     if(!content || !currentEditingPhoto) return;
     try {
-      await addComment(currentEditingPhoto.id, currentUser.id, content);
+      await addComment(currentEditingPhoto.id, content);
       input.value = '';
       loadComments(currentEditingPhoto.id);
       loadAppData(); // Refresh timeline counts
     } catch (e) {
-      showToast('댓글 작성 실패');
+      console.error(e);
+      showToast('댓글 작성 실패: ' + (e?.message || ''));
     }
   });
+
+function openMapBottomSheet(photo) {
+  const sheet = document.getElementById('map-bottom-sheet');
+  const img = document.getElementById('map-sheet-img');
+  const date = document.getElementById('map-sheet-date');
+  const memo = document.getElementById('map-sheet-memo');
+  const address = document.getElementById('map-sheet-address');
+
+  if (img) img.src = photo.thumbnail_url || photo.thumbnailDataUrl || '';
+  if (date) date.textContent = formatDate(photo.date || photo.created_at);
+  if (memo) memo.textContent = photo.memo || '추억';
+  if (address) address.textContent = photo.address || '위치 미상';
+
+  if (sheet) sheet.classList.remove('translate-y-full');
+
+  // Also bind click to open photo modal
+  if (img) {
+    img.onclick = () => {
+      if (sheet) sheet.classList.add('translate-y-full');
+      openPhotoModal(photo);
+    };
+  }
+}
+
+// Bind bottom sheet close button
+const mapSheetClose = document.getElementById('map-sheet-close');
+if (mapSheetClose) {
+  mapSheetClose.addEventListener('click', () => {
+    document.getElementById('map-bottom-sheet')?.classList.add('translate-y-full');
+  });
+}
 
   // Like Button
   document.getElementById('photo-modal-like-btn').addEventListener('click', async () => {
@@ -844,6 +960,17 @@ function handleCancel() {
 
 // ──────────────────────────────────────
 // Timeline Rendering
+function populateLocationFilter() {
+  const locSelect = document.getElementById('location-filter-select');
+  if (!locSelect) return;
+  const locations = new Set(allPhotosCache.map(p => p.address).filter(Boolean));
+  let html = '<option value="">전체 장소</option>';
+  locations.forEach(loc => {
+    html += `<option value="${loc}" ${currentTimelineLocation === loc ? 'selected' : ''}>${loc}</option>`;
+  });
+  locSelect.innerHTML = html;
+}
+
 // ──────────────────────────────────────
 function renderTimeline() {
   let photos = [...allPhotosCache];
@@ -851,6 +978,23 @@ function renderTimeline() {
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     photos = photos.filter(p => (p.memo?.toLowerCase().includes(q) || p.address?.toLowerCase().includes(q)));
+  }
+
+  const now = new Date();
+  if (currentTimelineFilter === 'favorite') {
+    photos = photos.filter(p => p.favorite);
+  } else if (currentTimelineFilter === 'week') {
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    photos = photos.filter(p => new Date(p.date || p.created_at) >= oneWeekAgo);
+  } else if (currentTimelineFilter === 'month') {
+    photos = photos.filter(p => {
+      const d = new Date(p.date || p.created_at);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
+  } else if (currentTimelineFilter === 'year') {
+    photos = photos.filter(p => new Date(p.date || p.created_at).getFullYear() === now.getFullYear());
+  } else if (currentTimelineFilter === 'location' && currentTimelineLocation) {
+    photos = photos.filter(p => p.address === currentTimelineLocation);
   }
 
   photoCountBadge.textContent = `${photos.length}개의 기록`;
