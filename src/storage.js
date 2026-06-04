@@ -44,17 +44,18 @@ export async function savePhoto(photoData, familyId) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
+  console.log('[savePhoto] Step 1: User authenticated:', user.id);
+  console.log('[savePhoto] Family ID:', familyId || photoData.family_id);
+
   const photoId = photoData.id || crypto.randomUUID();
   
   // Handle image upload - could be File, Blob, or dataURL
   let imageFile, thumbFile;
   
   if (photoData.imageFile) {
-    // New upload - resize and upload
     imageFile = await resizeImage(photoData.imageFile, 1200, 0.7);
     thumbFile = await resizeImage(photoData.imageFile, 300, 0.6);
   } else if (photoData.imageDataUrl) {
-    // Legacy format (base64 dataURL) - convert to file then resize
     const tempFile = dataURLtoFile(photoData.imageDataUrl, 'photo.jpg');
     imageFile = await resizeImage(tempFile, 1200, 0.7);
     thumbFile = photoData.thumbnailDataUrl ? 
@@ -62,37 +63,51 @@ export async function savePhoto(photoData, familyId) {
       await resizeImage(tempFile, 300, 0.6);
   }
 
+  console.log('[savePhoto] Step 2: Images prepared, imageFile:', !!imageFile, 'thumbFile:', !!thumbFile);
+
   let imageUrl = photoData.image_url;
   let thumbnailUrl = photoData.thumbnail_url;
 
   // Upload to storage if we have new files
   if (imageFile) {
     const imagePath = `${user.id}/${photoId}_full.jpg`;
+    console.log('[savePhoto] Step 3a: Uploading image to:', imagePath);
     const { error: imgErr } = await supabase.storage
       .from('photos')
       .upload(imagePath, imageFile, { contentType: 'image/jpeg', upsert: true });
-    if (imgErr) throw imgErr;
+    if (imgErr) {
+      console.error('[savePhoto] Storage upload error (image):', imgErr);
+      throw new Error('이미지 업로드 실패: ' + imgErr.message);
+    }
     const { data: imgUrl } = supabase.storage.from('photos').getPublicUrl(imagePath);
     imageUrl = imgUrl.publicUrl;
+    console.log('[savePhoto] Step 3a: Image uploaded OK:', imageUrl);
   }
 
   if (thumbFile) {
     const thumbPath = `${user.id}/${photoId}_thumb.jpg`;
+    console.log('[savePhoto] Step 3b: Uploading thumb to:', thumbPath);
     const { error: thumbErr } = await supabase.storage
       .from('photos')
       .upload(thumbPath, thumbFile, { contentType: 'image/jpeg', upsert: true });
-    if (thumbErr) throw thumbErr;
+    if (thumbErr) {
+      console.error('[savePhoto] Storage upload error (thumb):', thumbErr);
+      throw new Error('썸네일 업로드 실패: ' + thumbErr.message);
+    }
     const { data: thumbUrl } = supabase.storage.from('photos').getPublicUrl(thumbPath);
     thumbnailUrl = thumbUrl.publicUrl;
+    console.log('[savePhoto] Step 3b: Thumb uploaded OK:', thumbnailUrl);
   }
 
   // Extract hashtags from memo
   const hashtags = (photoData.memo || '').match(/#[A-Za-z0-9가-힣_]+/g) || [];
 
+  const usedFamilyId = familyId || photoData.family_id;
+
   // Upsert photo metadata
   const record = {
     id: photoId,
-    family_id: familyId || photoData.family_id,
+    family_id: usedFamilyId,
     uploaded_by: user.id,
     image_url: imageUrl,
     thumbnail_url: thumbnailUrl,
@@ -107,17 +122,20 @@ export async function savePhoto(photoData, familyId) {
     favorite: photoData.favorite || false,
   };
 
+  console.log('[savePhoto] Step 4: Inserting DB record:', JSON.stringify(record, null, 2));
+
   const { data, error } = await supabase
     .from('photos')
     .upsert(record)
-    .select(`
-      *,
-      uploader:uploaded_by(nickname, avatar_url),
-      photo_likes(count),
-      photo_comments(count)
-    `)
+    .select('*')
     .single();
-  if (error) throw error;
+  
+  if (error) {
+    console.error('[savePhoto] DB insert error:', error);
+    throw new Error('DB 저장 실패: ' + error.message);
+  }
+  
+  console.log('[savePhoto] Step 5: DB insert OK:', data.id);
   return data;
 }
 
