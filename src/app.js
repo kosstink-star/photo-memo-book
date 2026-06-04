@@ -440,36 +440,43 @@ function setupAuthEvents() {
 // View Navigation
 // ──────────────────────────────────────
 function switchView(view) {
-  currentView = view;
-  
-  homeView.classList.toggle('active', view === 'home');
-  timelineView.classList.toggle('active', view === 'timeline');
-  mapView.classList.toggle('active', view === 'map');
-  calendarView.classList.toggle('active', view === 'calendar');
-  albumsView.classList.toggle('active', view === 'albums');
+  try {
+    currentView = view;
+    
+    homeView.classList.toggle('active', view === 'home');
+    timelineView.classList.toggle('active', view === 'timeline');
+    mapView.classList.toggle('active', view === 'map');
+    calendarView.classList.toggle('active', view === 'calendar');
+    albumsView.classList.toggle('active', view === 'albums');
 
-  document.querySelectorAll('.nav-item').forEach(item => {
-    if (item.dataset.view === view) {
-      item.classList.add('active');
-      item.querySelector('.material-symbols-outlined').style.fontVariationSettings = "'FILL' 1";
-    } else if (item.dataset.view) {
-      item.classList.remove('active');
-      item.querySelector('.material-symbols-outlined').style.fontVariationSettings = "'FILL' 0";
-    }
-  });
+    document.querySelectorAll('.nav-item').forEach(item => {
+      if (item.dataset.view === view) {
+        item.classList.add('active');
+        const icon = item.querySelector('.material-symbols-outlined');
+        if (icon) icon.style.fontVariationSettings = "'FILL' 1";
+      } else if (item.dataset.view) {
+        item.classList.remove('active');
+        const icon = item.querySelector('.material-symbols-outlined');
+        if (icon) icon.style.fontVariationSettings = "'FILL' 0";
+      }
+    });
 
-  if (view === 'map') {
-    if (!mapInitialized) {
-      initMap('map-container');
-      setMarkerClickCallback(openMapBottomSheet);
-      mapInitialized = true;
+    if (view === 'map') {
+      if (!mapInitialized) {
+        initMap('map-container');
+        setMarkerClickCallback(openMapBottomSheet);
+        mapInitialized = true;
+      }
+      refreshMap();
+      refreshMapMarkers();
+    } else if (view === 'calendar') {
+      renderCalendar();
+    } else if (view === 'albums') {
+      renderAlbumsView();
     }
-    refreshMap();
-    refreshMapMarkers();
-  } else if (view === 'calendar') {
-    renderCalendar();
-  } else if (view === 'albums') {
-    renderAlbumsView();
+  } catch (err) {
+    console.error('switchView error:', err);
+    showToast('탭 전환 중 오류가 발생했습니다: ' + err.message);
   }
 }
 
