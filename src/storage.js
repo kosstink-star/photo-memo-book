@@ -143,12 +143,7 @@ export async function savePhoto(photoData, familyId) {
 export async function getAllPhotos(familyId) {
   const { data, error } = await supabase
     .from('photos')
-    .select(`
-      *,
-      uploader:uploaded_by(nickname, avatar_url),
-      photo_likes(count),
-      photo_comments(count)
-    `)
+    .select('*')
     .eq('family_id', familyId)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -159,10 +154,10 @@ export async function getAllPhotos(familyId) {
     thumbnailDataUrl: p.thumbnail_url,
     imageDataUrl: p.image_url,
     createdAt: new Date(p.created_at).getTime(),
-    likesCount: p.photo_likes?.[0]?.count || 0,
-    commentsCount: p.photo_comments?.[0]?.count || 0,
-    uploaderNickname: p.uploader?.nickname || '알 수 없음',
-    uploaderAvatar: p.uploader?.avatar_url,
+    likesCount: 0,
+    commentsCount: 0,
+    uploaderNickname: '멤버',
+    uploaderAvatar: null,
   }));
 }
 
@@ -170,12 +165,7 @@ export async function getAllPhotos(familyId) {
 export async function getPhoto(id) {
   const { data, error } = await supabase
     .from('photos')
-    .select(`
-      *,
-      uploader:uploaded_by(nickname, avatar_url),
-      photo_likes(count),
-      photo_comments(count)
-    `)
+    .select('*')
     .eq('id', id)
     .single();
   if (error) throw error;
@@ -184,10 +174,10 @@ export async function getPhoto(id) {
     thumbnailDataUrl: data.thumbnail_url,
     imageDataUrl: data.image_url,
     createdAt: new Date(data.created_at).getTime(),
-    likesCount: data.photo_likes?.[0]?.count || 0,
-    commentsCount: data.photo_comments?.[0]?.count || 0,
-    uploaderNickname: data.uploader?.nickname || '알 수 없음',
-    uploaderAvatar: data.uploader?.avatar_url,
+    likesCount: 0,
+    commentsCount: 0,
+    uploaderNickname: '멤버',
+    uploaderAvatar: null,
   };
 }
 
@@ -229,12 +219,7 @@ export async function updatePhoto(id, updates) {
     .from('photos')
     .update(updates)
     .eq('id', id)
-    .select(`
-      *,
-      uploader:uploaded_by(nickname, avatar_url),
-      photo_likes(count),
-      photo_comments(count)
-    `)
+    .select('*')
     .single();
   if (error) throw error;
   return {
@@ -242,10 +227,10 @@ export async function updatePhoto(id, updates) {
     thumbnailDataUrl: data.thumbnail_url,
     imageDataUrl: data.image_url,
     createdAt: new Date(data.created_at).getTime(),
-    likesCount: data.photo_likes?.[0]?.count || 0,
-    commentsCount: data.photo_comments?.[0]?.count || 0,
-    uploaderNickname: data.uploader?.nickname || '알 수 없음',
-    uploaderAvatar: data.uploader?.avatar_url,
+    likesCount: 0,
+    commentsCount: 0,
+    uploaderNickname: '멤버',
+    uploaderAvatar: null,
   };
 }
 
