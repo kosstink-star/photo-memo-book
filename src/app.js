@@ -813,30 +813,53 @@ function renderTimeline() {
 // Modals & Details
 // ──────────────────────────────────────
 async function openPhotoModal(photo) {
-  currentEditingPhoto = photo;
-  
-  photoModalImg.src = photo.image_url || photo.imageDataUrl || photo.thumbnailDataUrl;
-  photoModalDate.textContent = formatDate(photo.date || photo.createdAt);
-  photoModalTitle.textContent = photo.memo || '추억 상세';
-  photoModalLocation.textContent = photo.address || '위치 미상';
-  photoModalMemo.innerHTML = formatHashtags(photo.memo) || '메모 없음';
-  
-  const uploader = familyMembers.find(m => m.user_id === photo.uploaded_by)?.profiles;
-  document.getElementById('photo-modal-uploader').textContent = uploader?.nickname || '사용자';
-  
-  // Likes status
-  const liked = await hasUserLiked(photo.id, currentUser.id);
-  const likeIcon = document.getElementById('photo-modal-like-icon');
-  likeIcon.classList.toggle('like-active', liked);
-  document.getElementById('photo-modal-like-count').textContent = photo.photo_likes?.[0]?.count || await getPhotoLikes(photo.id);
-  
-  loadComments(photo.id);
-  
-  photoModal.classList.add('active');
+  try {
+    currentEditingPhoto = photo;
+    
+    photoModalImg.src = photo.image_url || photo.imageDataUrl || photo.thumbnailDataUrl;
+    photoModalDate.textContent = formatDate(photo.date || photo.createdAt);
+    photoModalTitle.textContent = photo.memo || '추억 상세';
+    photoModalLocation.textContent = photo.address || '위치 미상';
+    photoModalMemo.innerHTML = formatHashtags(photo.memo) || '메모 없음';
+    
+    const uploader = familyMembers.find(m => m.user_id === photo.uploaded_by)?.profiles;
+    document.getElementById('photo-modal-uploader').textContent = uploader?.nickname || '사용자';
+    
+    try {
+      // Likes status
+      const liked = await hasUserLiked(photo.id, currentUser.id);
+      const likeIcon = document.getElementById('photo-modal-like-icon');
+      if (likeIcon) likeIcon.classList.toggle('like-active', liked);
+      
+      let likesCount = photo.photo_likes?.[0]?.count;
+      if (likesCount === undefined) {
+        const likes = await getPhotoLikes(photo.id);
+        likesCount = likes ? likes.length : 0;
+      }
+      const countEl = document.getElementById('photo-modal-like-count');
+      if (countEl) countEl.textContent = likesCount;
+    } catch (err) {
+      console.error('Error fetching likes:', err);
+      const countEl = document.getElementById('photo-modal-like-count');
+      if (countEl) countEl.textContent = '0';
+    }
+    
+    loadComments(photo.id);
+    
+    if (photoModal) {
+      photoModal.classList.add('active');
+    } else {
+      showToast('모달 요소를 찾을 수 없습니다.');
+    }
+  } catch (criticalError) {
+    console.error(criticalError);
+    showToast('모달 열기 실패: ' + criticalError.message);
+  }
 }
 
 async function loadComments(photoId) {
   const list = document.getElementById('photo-modal-comments-list');
+  if (!list) return;
   list.innerHTML = '<div class="text-center text-on-surface-variant text-sm py-2">불러오는 중...</div>';
   try {
     const comments = await getComments(photoId);
