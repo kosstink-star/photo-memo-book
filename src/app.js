@@ -693,7 +693,7 @@ async function handleSave() {
     const photoData = {
       family_id: currentFamily.id,
       uploaded_by: currentUser.id,
-      imageDataUrl: currentFileBase64, // Will be handled by storage.js to upload to Supabase Storage
+      imageDataUrl: currentFileBase64,
       thumbnailDataUrl: currentThumbnail,
       date: finalDate,
       lat: currentExifData?.lat || null,
@@ -703,13 +703,14 @@ async function handleSave() {
       file_name: currentFileName,
     };
     
-    await savePhoto(photoData);
+    await savePhoto(photoData, currentFamily.id);
     showToast('업로드 완료');
     handleCancel();
     loadAppData();
   } catch(e) {
-    console.error(e);
-    showToast('저장 실패');
+    console.error('Photo save error:', e);
+    const msg = e?.message || e?.error_description || JSON.stringify(e);
+    showToast('저장 실패: ' + msg);
   } finally {
     btnSave.disabled = false;
   }
