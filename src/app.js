@@ -167,6 +167,7 @@ const settingsModal = document.getElementById('settings-modal');
 const settingsModalClose = document.getElementById('settings-modal-close');
 const photoModal = document.getElementById('photo-modal');
 const photoModalClose = document.getElementById('photo-modal-close');
+const photoModalDelete = document.getElementById('photo-modal-delete');
 const albumCreateModal = document.getElementById('album-create-modal');
 const addToAlbumModal = document.getElementById('add-to-album-modal');
 
@@ -543,6 +544,23 @@ function setupEventListeners() {
       e.target.closest('.photo-modal').classList.remove('active');
     });
   });
+
+  if (photoModalDelete) {
+    photoModalDelete.addEventListener('click', async () => {
+      if (!currentEditingPhoto) return;
+      if (confirm('이 사진을 정말 삭제하시겠습니까? (이 작업은 되돌릴 수 없습니다)')) {
+        try {
+          await deletePhoto(currentEditingPhoto.id, currentFamily.id);
+          showToast('사진이 삭제되었습니다.');
+          photoModal.classList.remove('active');
+          loadAppData();
+        } catch (e) {
+          console.error(e);
+          showToast('삭제에 실패했습니다: ' + (e?.message || ''));
+        }
+      }
+    });
+  }
 
   // Albums
   albumCreateBtn.addEventListener('click', () => {
