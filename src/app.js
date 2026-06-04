@@ -693,8 +693,8 @@ async function handleSave() {
     const photoData = {
       family_id: currentFamily.id,
       uploaded_by: currentUser.id,
-      image_url: currentFileBase64, // Will be handled by storage.js to upload to Supabase Storage
-      thumbnail_url: currentThumbnail,
+      imageDataUrl: currentFileBase64, // Will be handled by storage.js to upload to Supabase Storage
+      thumbnailDataUrl: currentThumbnail,
       date: finalDate,
       lat: currentExifData?.lat || null,
       lng: currentExifData?.lng || null,

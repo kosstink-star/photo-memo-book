@@ -67,7 +67,7 @@ export async function savePhoto(photoData, familyId) {
 
   // Upload to storage if we have new files
   if (imageFile) {
-    const imagePath = `${familyId}/${photoId}_full.jpg`;
+    const imagePath = `${user.id}/${photoId}_full.jpg`;
     const { error: imgErr } = await supabase.storage
       .from('photos')
       .upload(imagePath, imageFile, { contentType: 'image/jpeg', upsert: true });
@@ -77,7 +77,7 @@ export async function savePhoto(photoData, familyId) {
   }
 
   if (thumbFile) {
-    const thumbPath = `${familyId}/${photoId}_thumb.jpg`;
+    const thumbPath = `${user.id}/${photoId}_thumb.jpg`;
     const { error: thumbErr } = await supabase.storage
       .from('photos')
       .upload(thumbPath, thumbFile, { contentType: 'image/jpeg', upsert: true });
@@ -175,11 +175,16 @@ export async function getPhoto(id) {
 
 // Delete photo (removes storage files too)
 export async function deletePhoto(id, familyId) {
-  // Delete storage files
-  await supabase.storage.from('photos').remove([
-    `${familyId}/${id}_full.jpg`,
-    `${familyId}/${id}_thumb.jpg`,
-  ]);
+  // Get uploader ID to find the correct storage path
+  const { data: photo } = await supabase.from('photos').select('uploaded_by').eq('id', id).single();
+  
+  if (photo) {
+    // Delete storage files
+    await supabase.storage.from('photos').remove([
+      `${photo.uploaded_by}/${id}_full.jpg`,
+      `${photo.uploaded_by}/${id}_thumb.jpg`,
+    ]);
+  }
   
   const { error } = await supabase.from('photos').delete().eq('id', id);
   if (error) throw error;
