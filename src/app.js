@@ -451,6 +451,31 @@ function setupAuthEvents() {
 // ──────────────────────────────────────
 // View Navigation
 // ──────────────────────────────────────
+
+function openMapBottomSheet(photo) {
+  const sheet = document.getElementById('map-bottom-sheet');
+  const img = document.getElementById('map-sheet-img');
+  const date = document.getElementById('map-sheet-date');
+  const memo = document.getElementById('map-sheet-memo');
+  const address = document.getElementById('map-sheet-address');
+
+  if (img) img.src = photo.thumbnail_url || photo.thumbnailDataUrl || '';
+  if (date) date.textContent = formatDate(photo.date || photo.created_at);
+  if (memo) memo.textContent = photo.memo || '추억';
+  if (address) address.textContent = photo.address || '위치 미상';
+
+  if (sheet) {
+    sheet.classList.remove('translate-y-full');
+  }
+
+  if (img) {
+    img.onclick = () => {
+      if (sheet) sheet.classList.add('translate-y-full');
+      openPhotoModal(photo);
+    };
+  }
+}
+
 function switchView(view) {
   try {
     currentView = view;
@@ -497,6 +522,13 @@ function switchView(view) {
 // ──────────────────────────────────────
 function setupEventListeners() {
   setupAuthEvents();
+  
+  const mapSheetClose = document.getElementById('map-sheet-close');
+  if (mapSheetClose) {
+    mapSheetClose.addEventListener('click', () => {
+      document.getElementById('map-bottom-sheet')?.classList.add('translate-y-full');
+    });
+  }
 
   // Nav
   navHome.addEventListener('click', () => switchView('home'));
@@ -601,22 +633,29 @@ function setupEventListeners() {
       selectedPhotosForAlbum.clear();
       
       albumAddPhotosGrid.innerHTML = allPhotosCache.map(p => `
-        <div class="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all group" data-add-pid="${p.id}">
+        <div class="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all photo-select-item" data-add-pid="${p.id}">
           <img src="${p.thumbnail_url || p.thumbnailDataUrl}" class="w-full h-full object-cover" />
-          <div class="absolute inset-0 bg-black/40 hidden group-[.selected]:block"></div>
-          <span class="material-symbols-outlined absolute top-1 right-1 text-primary hidden group-[.selected]:block bg-white rounded-full text-lg">check_circle</span>
+          <div class="absolute inset-0 bg-black/40 hidden photo-select-overlay"></div>
+          <span class="material-symbols-outlined absolute top-1 right-1 text-primary hidden photo-select-check bg-white rounded-full text-lg">check_circle</span>
         </div>
       `).join('');
       
-      albumAddPhotosGrid.querySelectorAll('[data-add-pid]').forEach(el => {
+      albumAddPhotosGrid.querySelectorAll('.photo-select-item').forEach(el => {
         el.addEventListener('click', () => {
           const pid = el.dataset.addPid;
+          const overlay = el.querySelector('.photo-select-overlay');
+          const check = el.querySelector('.photo-select-check');
+          
           if (selectedPhotosForAlbum.has(pid)) {
             selectedPhotosForAlbum.delete(pid);
-            el.classList.remove('selected');
+            el.classList.remove('ring-2', 'ring-primary');
+            overlay.classList.add('hidden');
+            check.classList.add('hidden');
           } else {
             selectedPhotosForAlbum.add(pid);
-            el.classList.add('selected');
+            el.classList.add('ring-2', 'ring-primary');
+            overlay.classList.remove('hidden');
+            check.classList.remove('hidden');
           }
         });
       });
@@ -913,36 +952,7 @@ function setupEventListeners() {
     }
   });
 
-function openMapBottomSheet(photo) {
-  const sheet = document.getElementById('map-bottom-sheet');
-  const img = document.getElementById('map-sheet-img');
-  const date = document.getElementById('map-sheet-date');
-  const memo = document.getElementById('map-sheet-memo');
-  const address = document.getElementById('map-sheet-address');
 
-  if (img) img.src = photo.thumbnail_url || photo.thumbnailDataUrl || '';
-  if (date) date.textContent = formatDate(photo.date || photo.created_at);
-  if (memo) memo.textContent = photo.memo || '추억';
-  if (address) address.textContent = photo.address || '위치 미상';
-
-  if (sheet) sheet.classList.remove('translate-y-full');
-
-  // Also bind click to open photo modal
-  if (img) {
-    img.onclick = () => {
-      if (sheet) sheet.classList.add('translate-y-full');
-      openPhotoModal(photo);
-    };
-  }
-}
-
-// Bind bottom sheet close button
-const mapSheetClose = document.getElementById('map-sheet-close');
-if (mapSheetClose) {
-  mapSheetClose.addEventListener('click', () => {
-    document.getElementById('map-bottom-sheet')?.classList.add('translate-y-full');
-  });
-}
 
   // Like Button
   document.getElementById('photo-modal-like-btn').addEventListener('click', async () => {
@@ -1266,7 +1276,10 @@ async function loadComments(photoId) {
             <div class="comment-header">
               <span class="comment-author">${authorProfile.nickname}</span>
               <span class="comment-time">${formatDateShort(c.created_at)}</span>
-              ${isMine ? `<button class="comment-delete" data-cid="${c.id}"><span class="material-symbols-outlined text-[14px]">delete</span></button>` : ''}
+              <div class="flex items-center gap-2 ml-2">
+                ${isMine ? `<button class="comment-edit text-on-surface-variant hover:text-primary transition-colors" data-cid="${c.id}" data-content="${c.content}"><span class="material-symbols-outlined text-[14px]">edit</span></button>
+                            <button class="comment-delete text-on-surface-variant hover:text-error transition-colors" data-cid="${c.id}"><span class="material-symbols-outlined text-[14px]">delete</span></button>` : ''}
+              </div>
             </div>
             <div class="comment-text">${c.content}</div>
           </div>
@@ -1280,6 +1293,20 @@ async function loadComments(photoId) {
           await deleteComment(btn.dataset.cid);
           loadComments(photoId);
           loadAppData();
+        }
+      });
+    });
+
+    list.querySelectorAll('.comment-edit').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const newContent = prompt('댓글을 수정하세요:', btn.dataset.content);
+        if(newContent && newContent.trim() !== '' && newContent !== btn.dataset.content) {
+          try {
+            await updateComment(btn.dataset.cid, newContent.trim());
+            loadComments(photoId);
+          } catch(e) {
+            showToast('댓글 수정 실패: ' + (e?.message || ''));
+          }
         }
       });
     });
