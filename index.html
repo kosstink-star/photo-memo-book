@@ -114,11 +114,11 @@
         <!-- Create Family -->
         <div class="mb-6">
           <h3 class="font-title-md text-title-md text-white mb-3">새 가족 만들기</h3>
-          <div class="flex gap-3">
+          <div class="flex flex-col sm:flex-row gap-3">
             <input type="text" id="family-name-input" placeholder="가족 이름 (예: 김씨네)" maxlength="30"
               class="flex-1 bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors" />
             <button id="family-create-btn"
-              class="px-6 py-3 rounded-xl bg-primary-container text-on-primary-container font-title-md hover:brightness-110 transition-all active:scale-95 whitespace-nowrap">
+              class="w-full sm:w-auto px-6 py-3 rounded-xl bg-primary-container text-on-primary-container font-title-md hover:brightness-110 transition-all active:scale-95 whitespace-nowrap">
               만들기
             </button>
           </div>
@@ -131,11 +131,11 @@
         <!-- Join Family -->
         <div>
           <h3 class="font-title-md text-title-md text-white mb-3">초대 코드로 참여</h3>
-          <div class="flex gap-3">
+          <div class="flex flex-col sm:flex-row gap-3">
             <input type="text" id="family-code-input" placeholder="6자리 코드 입력" maxlength="6"
-              class="flex-1 bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors text-center tracking-[0.3em] uppercase font-mono text-lg" />
+              class="flex-1 bg-surface-container border border-white/20 rounded-xl px-4 py-3 text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-colors text-center tracking-widest sm:tracking-[0.3em] uppercase font-mono text-lg" />
             <button id="family-join-btn"
-              class="px-6 py-3 rounded-xl glass-surface border border-white/20 text-on-surface-variant font-title-md hover:bg-white/10 transition-all active:scale-95 whitespace-nowrap">
+              class="w-full sm:w-auto px-6 py-3 rounded-xl bg-white/10 border border-white/20 text-white font-title-md hover:bg-white/20 transition-all active:scale-95 whitespace-nowrap">
               참여하기
             </button>
           </div>
