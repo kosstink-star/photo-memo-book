@@ -306,3 +306,8 @@ export async function deleteComment(commentId) {
     .eq('id', commentId);
   if (error) throw error;
 }
+
+export async function updateComment(commentId, newContent) {
+  const { error } = await supabase.from('photo_comments').update({ content: newContent }).eq('id', commentId);
+  if (error) throw error;
+}

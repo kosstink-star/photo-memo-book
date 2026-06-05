@@ -9,7 +9,7 @@ import { supabase } from './supabase.js';
 import { signUp, signIn, signOut, getCurrentUser, onAuthStateChange, updateProfile } from './auth.js';
 import { createFamily, joinFamily, getMyFamily, getFamilyMembers, getFamilyInviteCode } from './family.js';
 import { createAlbum, getAlbums, getAlbumPhotos, addPhotoToAlbum, removePhotoFromAlbum, deleteAlbum } from './albums.js';
-import { savePhoto, getAllPhotos, deletePhoto, updatePhoto, likePhoto, unlikePhoto, hasUserLiked, addComment, getComments, deleteComment } from './storage.js';
+import { savePhoto, getAllPhotos, deletePhoto, updatePhoto, likePhoto, unlikePhoto, hasUserLiked, addComment, getComments, deleteComment, updateComment } from './storage.js';
 
 // ──────────────────────────────────────
 // DOM References
@@ -170,8 +170,10 @@ const photoModalClose = document.getElementById('photo-modal-close');
 const photoModalDelete = document.getElementById('photo-modal-delete');
 const photoModalImg = document.getElementById('photo-modal-img');
 const photoModalDate = document.getElementById('photo-modal-date');
+const photoModalDateInput = document.getElementById('photo-modal-date-input');
 const photoModalTitle = document.getElementById('photo-modal-title');
 const photoModalLocation = document.getElementById('photo-modal-location');
+const photoModalLocationInput = document.getElementById('photo-modal-location-input');
 const photoModalMemo = document.getElementById('photo-modal-memo');
 const photoModalEdit = document.getElementById('photo-modal-edit');
 const photoModalFavorite = document.getElementById('photo-modal-favorite');
@@ -182,6 +184,12 @@ const albumCreateModal = document.getElementById('album-create-modal');
 const addToAlbumModal = document.getElementById('add-to-album-modal');
 const addToAlbumList = document.getElementById('add-to-album-list');
 const photoModalAddToAlbum = document.getElementById('photo-modal-add-to-album');
+
+const albumAddPhotosModal = document.getElementById('album-add-photos-modal');
+const albumAddPhotosGrid = document.getElementById('album-add-photos-grid');
+const albumAddPhotosCancel = document.getElementById('album-add-photos-cancel');
+const albumAddPhotosSave = document.getElementById('album-add-photos-save');
+const albumAddPhotosBtn = document.getElementById('album-add-photos-btn');
 
 // Settings Elements
 const settingsNickname = document.getElementById('settings-nickname');
@@ -584,6 +592,68 @@ function setupEventListeners() {
       }
     });
   }
+  
+  let selectedPhotosForAlbum = new Set();
+  
+  if (albumAddPhotosBtn && albumAddPhotosModal) {
+    albumAddPhotosBtn.addEventListener('click', () => {
+      if (!currentAlbumView) return;
+      selectedPhotosForAlbum.clear();
+      
+      albumAddPhotosGrid.innerHTML = allPhotosCache.map(p => `
+        <div class="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all group" data-add-pid="${p.id}">
+          <img src="${p.thumbnail_url || p.thumbnailDataUrl}" class="w-full h-full object-cover" />
+          <div class="absolute inset-0 bg-black/40 hidden group-[.selected]:block"></div>
+          <span class="material-symbols-outlined absolute top-1 right-1 text-primary hidden group-[.selected]:block bg-white rounded-full text-lg">check_circle</span>
+        </div>
+      `).join('');
+      
+      albumAddPhotosGrid.querySelectorAll('[data-add-pid]').forEach(el => {
+        el.addEventListener('click', () => {
+          const pid = el.dataset.addPid;
+          if (selectedPhotosForAlbum.has(pid)) {
+            selectedPhotosForAlbum.delete(pid);
+            el.classList.remove('selected');
+          } else {
+            selectedPhotosForAlbum.add(pid);
+            el.classList.add('selected');
+          }
+        });
+      });
+      
+      albumAddPhotosModal.classList.add('active');
+    });
+    
+    if (albumAddPhotosSave) {
+      albumAddPhotosSave.addEventListener('click', async () => {
+        if (!currentAlbumView || selectedPhotosForAlbum.size === 0) {
+          albumAddPhotosModal.classList.remove('active');
+          return;
+        }
+        try {
+          // In a real app, we'd use a Promise.all or bulk insert API
+          albumAddPhotosSave.disabled = true;
+          albumAddPhotosSave.textContent = '추가 중...';
+          
+          for (let pid of selectedPhotosForAlbum) {
+            try {
+              await addPhotoToAlbum(currentAlbumView.id, pid);
+            } catch (e) {
+               // might already be in album, ignore
+            }
+          }
+          showToast(`${selectedPhotosForAlbum.size}장의 사진을 앨범에 추가했습니다.`);
+          albumAddPhotosModal.classList.remove('active');
+          openAlbumDetail(currentAlbumView.id, [{...currentAlbumView}]); // Refresh album view
+        } catch (e) {
+          showToast('사진 추가 중 오류가 발생했습니다.');
+        } finally {
+          albumAddPhotosSave.disabled = false;
+          albumAddPhotosSave.textContent = '추가 완료';
+        }
+      });
+    }
+  }
 
   // Settings
   document.getElementById('btn-settings').addEventListener('click', () => {
@@ -640,10 +710,29 @@ function setupEventListeners() {
   btnCancel.addEventListener('click', handleCancel);
 
   // Modals
-  [photoModalClose, document.getElementById('add-to-album-close'), document.getElementById('album-create-cancel')].forEach(btn => {
-    if(btn) btn.addEventListener('click', (e) => {
-      e.target.closest('.photo-modal').classList.remove('active');
-    });
+  [photoModalClose, document.getElementById('add-to-album-close'), document.getElementById('album-create-cancel'), albumAddPhotosCancel].forEach(btn => {
+    if(btn) {
+      btn.addEventListener('click', () => {
+        photoModal.classList.remove('active');
+        albumCreateModal.classList.remove('active');
+        addToAlbumModal.classList.remove('active');
+        if (albumAddPhotosModal) albumAddPhotosModal.classList.remove('active');
+        currentEditingPhoto = null;
+        
+        // Reset edit mode if it was left open
+        if (photoModalMemo && photoModalMemoTextarea && photoModalSaveBtn) {
+          photoModalMemo.classList.remove('hidden');
+          photoModalMemoTextarea.classList.add('hidden');
+          if (photoModalDateInput) {
+            photoModalDate.classList.remove('hidden');
+            photoModalDateInput.classList.add('hidden');
+            photoModalLocation.classList.remove('hidden');
+            photoModalLocationInput.classList.add('hidden');
+          }
+          photoModalSaveBtn.classList.add('hidden');
+        }
+      });
+    }
   });
 
   if (photoModalDelete) {
@@ -668,29 +757,68 @@ function setupEventListeners() {
       if (!currentEditingPhoto) return;
       photoModalMemo.classList.add('hidden');
       photoModalMemoTextarea.classList.remove('hidden');
+      photoModalDate.classList.add('hidden');
+      photoModalDateInput.classList.remove('hidden');
+      photoModalLocation.classList.add('hidden');
+      photoModalLocationInput.classList.remove('hidden');
       photoModalSaveBtn.classList.remove('hidden');
+      
       photoModalMemoTextarea.value = currentEditingPhoto.memo || '';
+      photoModalDateInput.value = currentEditingPhoto.date ? new Date(currentEditingPhoto.date).toISOString().split('T')[0] : '';
+      photoModalLocationInput.value = currentEditingPhoto.address || '';
+      
       photoModalMemoTextarea.focus();
     });
 
     photoModalSaveBtn.addEventListener('click', async () => {
       if (!currentEditingPhoto) return;
       const newMemo = photoModalMemoTextarea.value.trim();
+      let newDateStr = photoModalDateInput.value;
+      const newAddress = photoModalLocationInput.value.trim();
+      
+      if(newDateStr) {
+         // Keep time part if exists
+         const oldDate = new Date(currentEditingPhoto.date);
+         const newDateObj = new Date(newDateStr);
+         if(!isNaN(oldDate)) {
+           newDateObj.setHours(oldDate.getHours(), oldDate.getMinutes(), oldDate.getSeconds());
+         }
+         newDateStr = newDateObj.toISOString();
+      } else {
+         newDateStr = currentEditingPhoto.date;
+      }
+      
       try {
-        const updatedPhoto = await updatePhoto(currentEditingPhoto.id, { memo: newMemo });
+        const updates = { memo: newMemo, address: newAddress, date: newDateStr };
+        const updatedPhoto = await updatePhoto(currentEditingPhoto.id, updates);
+        
         currentEditingPhoto.memo = newMemo;
+        currentEditingPhoto.address = newAddress;
+        currentEditingPhoto.date = newDateStr;
+        
         const cached = allPhotosCache.find(p => p.id === currentEditingPhoto.id);
-        if (cached) cached.memo = newMemo;
+        if (cached) {
+          cached.memo = newMemo;
+          cached.address = newAddress;
+          cached.date = newDateStr;
+        }
         
         photoModalMemo.innerHTML = formatHashtags(newMemo) || '메모 없음';
+        photoModalLocation.textContent = newAddress || '정보 없음';
+        photoModalDate.textContent = formatDate(newDateStr);
+        
         photoModalMemo.classList.remove('hidden');
         photoModalMemoTextarea.classList.add('hidden');
+        photoModalDate.classList.remove('hidden');
+        photoModalDateInput.classList.add('hidden');
+        photoModalLocation.classList.remove('hidden');
+        photoModalLocationInput.classList.add('hidden');
         photoModalSaveBtn.classList.add('hidden');
         
         renderTimeline();
-        showToast('메모가 수정되었습니다.');
+        showToast('추억 정보가 수정되었습니다.');
       } catch (e) {
-        showToast('메모 수정 실패: ' + (e?.message || ''));
+        showToast('수정 실패: ' + (e?.message || ''));
       }
     });
   }
@@ -1074,6 +1202,12 @@ async function openPhotoModal(photo) {
     if (photoModalMemo && photoModalMemoTextarea && photoModalSaveBtn) {
       photoModalMemo.classList.remove('hidden');
       photoModalMemoTextarea.classList.add('hidden');
+      if (photoModalDateInput) {
+        photoModalDate.classList.remove('hidden');
+        photoModalDateInput.classList.add('hidden');
+        photoModalLocation.classList.remove('hidden');
+        photoModalLocationInput.classList.add('hidden');
+      }
       photoModalSaveBtn.classList.add('hidden');
     }
 
@@ -1263,38 +1397,36 @@ function updateHomeView() {
 }
 
 function renderMonthlyStats() {
-  const months = Array(6).fill(0);
-  const labels = [];
+  const days = 30;
+  const heatmapData = Array(days).fill(0);
   const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    labels.push(d.toLocaleDateString('ko-KR', { month: 'short' }));
-  }
-  
+  // Count photos per day for the last 30 days
   allPhotosCache.forEach(p => {
     const pd = new Date(p.date || p.created_at);
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const dEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-      if (pd >= d && pd <= dEnd) {
-        months[5 - i]++;
-        break;
-      }
+    const photoDate = new Date(pd.getFullYear(), pd.getMonth(), pd.getDate());
+    const diffTime = today - photoDate;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays >= 0 && diffDays < days) {
+      heatmapData[days - 1 - diffDays]++;
     }
   });
   
-  const max = Math.max(...months, 1);
-  homeStatsBars.innerHTML = months.map((c, i) => {
-    const h = Math.max((c / max) * 100, 4);
-    return `<div class="flex-1 flex flex-col items-center justify-end">
-      <span class="text-[10px] text-primary mb-1">${c}</span>
-      <div class="w-full rounded-full bg-primary/30" style="height: ${h}%">
-        <div class="w-full h-full rounded-full bg-primary"></div>
-      </div>
-    </div>`;
+  const max = Math.max(...heatmapData, 1);
+  homeStatsBars.innerHTML = heatmapData.map((c, i) => {
+    let intensityClass = 'bg-primary/10';
+    if (c > 0) {
+      const ratio = c / max;
+      if (ratio > 0.7) intensityClass = 'bg-primary';
+      else if (ratio > 0.4) intensityClass = 'bg-primary/70';
+      else intensityClass = 'bg-primary/40';
+    }
+    
+    // Uploader color coding (Option 4): if there's a dominant uploader, we could color it, but for now we vary intensity of the theme color.
+    return `<div class="aspect-square rounded-sm ${intensityClass} hover:ring-1 ring-white/50 cursor-pointer transition-all" title="${c}개의 추억"></div>`;
   }).join('');
-  homeStatsLabels.innerHTML = labels.map(l => `<span>${l}</span>`).join('');
 }
 
 function renderOnThisDay() {
@@ -1328,12 +1460,15 @@ function renderCalendar() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   
   // Build photo count per day
+  // Build photo count per day and store first thumbnail
   const photoDays = {};
+  const photoThumbs = {};
   allPhotosCache.forEach(p => {
     const pd = new Date(p.date || p.created_at);
     if (pd.getFullYear() === year && pd.getMonth() === month) {
       const day = pd.getDate();
       photoDays[day] = (photoDays[day] || 0) + 1;
+      if (!photoThumbs[day]) photoThumbs[day] = p.thumbnail_url || p.thumbnailDataUrl;
     }
   });
   
@@ -1351,10 +1486,11 @@ function renderCalendar() {
     const hasPhotos = count > 0;
     
     html += `
-      <div class="cal-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${hasPhotos ? 'has-photos' : ''}" 
-           data-day="${d}" style="cursor: ${hasPhotos ? 'pointer' : 'default'}">
-        <span class="cal-day-num ${isToday ? 'text-primary font-bold' : 'text-on-surface-variant'}">${d}</span>
-        ${hasPhotos ? `<div class="cal-dot"></div>` : ''}
+      <div class="cal-cell relative overflow-hidden ${isToday ? 'today' : ''} ${isSelected ? 'selected ring-2 ring-primary' : ''} ${hasPhotos ? 'has-photos' : ''}" 
+           data-day="${d}" style="cursor: ${hasPhotos ? 'pointer' : 'default'}; min-height: 48px;">
+        ${hasPhotos ? `<img src="${photoThumbs[d]}" class="absolute inset-0 w-full h-full object-cover opacity-60 rounded-md group-hover:opacity-100 transition-opacity" />` : ''}
+        <span class="cal-day-num relative z-10 p-1 ${isToday ? 'text-primary font-bold' : (hasPhotos ? 'text-white font-medium drop-shadow-md' : 'text-on-surface-variant')}">${d}</span>
+        ${hasPhotos ? `<span class="absolute bottom-1 right-1 text-[9px] bg-black/60 text-white px-1 rounded-sm z-10">${count}</span>` : ''}
       </div>
     `;
   }
