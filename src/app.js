@@ -1320,9 +1320,10 @@ async function loadComments(photoId) {
 // ──────────────────────────────────────
 async function renderAlbumsView() {
   try {
-    const albums = await getAlbums(currentFamily.id);
+    document.getElementById('album-detail-view').classList.add('hidden');
+    const albumsRaw = await getAlbums(currentFamily.id);
     
-    if (albums.length === 0) {
+    if (albumsRaw.length === 0) {
       albumsGrid.classList.add('hidden');
       albumsEmpty.classList.remove('hidden');
       return;
@@ -1330,15 +1331,33 @@ async function renderAlbumsView() {
     albumsGrid.classList.remove('hidden');
     albumsEmpty.classList.add('hidden');
     
+    // Fetch cover photos for each album
+    const albums = await Promise.all(albumsRaw.map(async album => {
+      try {
+        const photos = await getAlbumPhotos(album.id);
+        album.coverUrl = photos.length > 0 ? (photos[0].thumbnail_url || photos[0].thumbnailDataUrl) : null;
+        album.photoCount = photos.length;
+      } catch(e) {
+        album.coverUrl = null;
+        album.photoCount = 0;
+      }
+      return album;
+    }));
+    
     albumsGrid.innerHTML = albums.map(album => {
+      const coverHtml = album.coverUrl 
+        ? `<img src="${album.coverUrl}" class="absolute inset-0 w-full h-full object-cover" />`
+        : `<div class="album-grid-empty-icon"><span class="material-symbols-outlined text-4xl text-white/20">photo_library</span></div>`;
+        
       return `
         <div class="album-grid-card" data-aid="${album.id}">
-          <div class="album-grid-empty-icon"><span class="material-symbols-outlined text-4xl text-white/20">photo_library</span></div>
-          <div class="album-grid-overlay">
-            <h3 class="album-grid-name">${album.name}</h3>
-            <div class="album-grid-meta">
+          ${coverHtml}
+          <div class="album-grid-overlay bg-gradient-to-t from-black/80 via-black/30 to-transparent absolute inset-0 flex flex-col justify-end p-4">
+            <h3 class="album-grid-name font-title-md text-white text-lg">${album.name}</h3>
+            <div class="album-grid-meta flex items-center gap-1 text-white/80 text-sm mt-1">
               <span class="material-symbols-outlined text-[14px]">photo_library</span>
-              ${album.description || ''}
+              <span>${album.photoCount}장</span>
+              ${album.description ? `<span class="mx-1">•</span><span class="truncate">${album.description}</span>` : ''}
             </div>
           </div>
         </div>
@@ -1368,16 +1387,39 @@ async function openAlbumDetail(albumId, albumsList) {
   try {
     const photos = await getAlbumPhotos(albumId);
     albumDetailGrid.innerHTML = photos.map(photo => `
-      <div class="timeline-card-photo rounded-lg cursor-pointer" data-pid="${photo.id}">
+      <div class="timeline-card-photo rounded-lg cursor-pointer group relative" data-pid="${photo.id}">
         <img src="${photo.thumbnail_url || photo.thumbnailDataUrl}" class="w-full aspect-square object-cover rounded-lg" />
+        <button class="absolute top-1 right-1 w-6 h-6 bg-black/50 hover:bg-error/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all album-photo-remove" data-remove-pid="${photo.id}" title="앨범에서 제거">
+          <span class="material-symbols-outlined text-[14px]">close</span>
+        </button>
       </div>
     `).join('');
     
-    albumDetailGrid.querySelectorAll('[data-pid]').forEach(el => {
-      el.addEventListener('click', () => {
+    albumDetailGrid.querySelectorAll('.timeline-card-photo').forEach(el => {
+      // Photo click to open
+      el.addEventListener('click', (e) => {
+        // Prevent opening modal if clicking the remove button
+        if(e.target.closest('.album-photo-remove')) return;
         const p = allPhotosCache.find(x => x.id === el.dataset.pid);
         if(p) openPhotoModal(p);
       });
+      
+      // Remove button click
+      const removeBtn = el.querySelector('.album-photo-remove');
+      if(removeBtn) {
+        removeBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if(confirm('이 사진을 앨범에서 제거하시겠습니까? (사진 원본은 삭제되지 않습니다)')) {
+            try {
+              await removePhotoFromAlbum(albumId, removeBtn.dataset.removePid);
+              showToast('앨범에서 제거되었습니다.');
+              openAlbumDetail(albumId, albumsList); // Refresh
+            } catch(err) {
+              showToast('제거 실패: ' + (err?.message || ''));
+            }
+          }
+        });
+      }
     });
   } catch(e) {
     console.error('Album detail error:', e);
