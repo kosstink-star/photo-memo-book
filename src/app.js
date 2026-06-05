@@ -1389,8 +1389,8 @@ async function openAlbumDetail(albumId, albumsList) {
     albumDetailGrid.innerHTML = photos.map(photo => `
       <div class="timeline-card-photo rounded-lg cursor-pointer group relative" data-pid="${photo.id}">
         <img src="${photo.thumbnail_url || photo.thumbnailDataUrl}" class="w-full aspect-square object-cover rounded-lg" />
-        <button class="absolute top-2 right-2 w-8 h-8 bg-black/60 hover:bg-error text-white rounded-full flex items-center justify-center transition-all album-photo-remove z-10" data-remove-pid="${photo.id}" title="앨범에서 제거">
-          <span class="material-symbols-outlined text-[18px]">close</span>
+        <button class="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-error text-white rounded-full flex items-center justify-center transition-all album-photo-remove z-10" data-remove-pid="${photo.id}" title="앨범에서 제거">
+          <span class="material-symbols-outlined text-[14px]">close</span>
         </button>
       </div>
     `).join('');
