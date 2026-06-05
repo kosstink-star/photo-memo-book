@@ -1148,8 +1148,8 @@ function renderTimeline() {
     const isLarge = idx === 0 && !searchQuery;
     const colSpan = isLarge ? 'col-span-4 md:col-span-6' : 'col-span-2 md:col-span-4';
     
-    // Uploader profile
-    const uploader = familyMembers.find(m => m.user_id === photo.uploaded_by)?.profiles;
+    // Uploader profile (fallback to first member for old test data without uploaded_by)
+    const uploaderProfile = familyMembers.find(m => m.user_id === photo.uploaded_by)?.profiles || familyMembers[0]?.profiles;
     
     return `
       <section class="${colSpan} timeline-card ${isLarge ? 'is-large' : ''} fade-in" data-id="${photo.id}">
@@ -1167,8 +1167,8 @@ function renderTimeline() {
           <button><span class="material-symbols-outlined text-[16px]">favorite</span> ${photo.photo_likes?.[0]?.count || 0}</button>
           <button><span class="material-symbols-outlined text-[16px]">chat_bubble</span> ${photo.photo_comments?.[0]?.count || 0}</button>
           <div class="uploader-info">
-            ${generateAvatarHtml(uploader, 'small')}
-            <span>${uploader?.nickname || 'User'}</span>
+            ${generateAvatarHtml(uploaderProfile, 'small')}
+            <span>${uploaderProfile?.nickname || 'User'}</span>
           </div>
         </div>
       </section>
@@ -1389,8 +1389,8 @@ async function openAlbumDetail(albumId, albumsList) {
     albumDetailGrid.innerHTML = photos.map(photo => `
       <div class="timeline-card-photo rounded-lg cursor-pointer group relative" data-pid="${photo.id}">
         <img src="${photo.thumbnail_url || photo.thumbnailDataUrl}" class="w-full aspect-square object-cover rounded-lg" />
-        <button class="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-error text-white rounded-full flex items-center justify-center transition-all album-photo-remove z-10" data-remove-pid="${photo.id}" title="앨범에서 제거">
-          <span class="material-symbols-outlined text-[14px]">close</span>
+        <button class="absolute top-1 right-1 w-5 h-5 bg-black/50 hover:bg-error text-white rounded-full flex items-center justify-center transition-all album-photo-remove z-10" data-remove-pid="${photo.id}" title="앨범에서 제거">
+          <span class="material-symbols-outlined text-[12px]">close</span>
         </button>
       </div>
     `).join('');
