@@ -352,10 +352,11 @@ async function updateSettingsMembers() {
   
   settingsMembersList.innerHTML = familyMembers.map(m => {
     const isMe = m.user_id === currentUser.id;
+    const nickname = m.profiles?.nickname || '알 수 없음';
     return `
       <div class="family-member-item">
         ${generateAvatarHtml(m.profiles, 'small')}
-        <span class="member-name">${m.profiles.nickname} ${isMe ? '(나)' : ''}</span>
+        <span class="member-name">${nickname} ${isMe ? '(나)' : ''}</span>
         <span class="member-role ${m.role}">${m.role === 'admin' ? '관리자' : '멤버'}</span>
       </div>
     `;
@@ -373,7 +374,7 @@ async function updateSettingsMembers() {
           <div class="family-member-item justify-between">
             <div class="flex items-center gap-3">
               ${generateAvatarHtml(m.profiles, 'small')}
-              <span class="member-name">${m.profiles.nickname}</span>
+              <span class="member-name">${m.profiles?.nickname || '알 수 없음'}</span>
             </div>
             <div class="flex gap-2">
               <button class="px-3 py-1 bg-primary text-on-primary rounded text-xs hover:brightness-110 btn-approve-member" data-uid="${m.user_id}">승인</button>
