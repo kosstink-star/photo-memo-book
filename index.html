@@ -146,18 +146,8 @@
           <button class="text-on-surface-variant/50 text-body-sm hover:text-on-surface-variant transition-colors" id="family-logout-btn">다른 계정으로 로그인</button>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Pending Approval Screen -->
-  <div id="auth-pending" class="hidden min-h-screen items-center justify-center p-grid-margin relative overflow-hidden bg-background">
-    <!-- Ambient Background -->
-    <div class="absolute inset-0 z-0">
-      <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[100px] animate-pulse-slow"></div>
-      <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-tertiary/20 blur-[100px] animate-pulse-slow" style="animation-delay: 2s;"></div>
-    </div>
-    <div class="w-full max-w-[400px] z-10 mx-auto">
-      <div class="glass-surface rounded-2xl p-8 border border-white/10 text-center">
+      <!-- ── Pending Approval ── -->
+      <div id="auth-pending" class="glass-surface rounded-2xl p-8 border border-white/10 hidden text-center">
         <div class="w-16 h-16 rounded-2xl bg-secondary-container/20 flex items-center justify-center mx-auto mb-4">
           <span class="material-symbols-outlined text-secondary text-3xl animate-pulse">hourglass_empty</span>
         </div>
@@ -168,6 +158,7 @@
         </button>
         <button class="text-on-surface-variant/50 text-body-sm hover:text-on-surface-variant transition-colors" id="pending-logout-btn">다른 계정으로 로그인</button>
       </div>
+
     </div>
   </div>
 
