@@ -114,6 +114,12 @@ const homeRandomMemo = document.getElementById('home-random-memo');
 const homeRandomDate = document.getElementById('home-random-date');
 const homeRandomLocation = document.getElementById('home-random-location');
 const homeRandomShuffle = document.getElementById('home-random-shuffle');
+
+const home1YearCard = document.getElementById('home-1year-card');
+const home1YearImg = document.getElementById('home-1year-img');
+const home1YearMemo = document.getElementById('home-1year-memo');
+const home1YearDate = document.getElementById('home-1year-date');
+const home1YearLocation = document.getElementById('home-1year-location');
 const homeRecapCard = document.getElementById('home-recap-card');
 const homeRecapCount = document.getElementById('home-recap-count');
 const homeRecapDiff = document.getElementById('home-recap-diff');
@@ -279,6 +285,7 @@ async function fetchFamilyMembers() {
     updateSettingsMembers();
   } catch (error) {
     console.error('Error fetching members:', error);
+    showToast('멤버 조회 오류: ' + (error.message || '알 수 없음'));
   }
 }
 
@@ -420,6 +427,7 @@ async function updateSettingsMembers() {
       }
     } catch (err) {
       console.error('Error loading pending members', err);
+      showToast('대기자 조회 오류: ' + (err.message || '알 수 없음'));
       pendingSection.classList.add('hidden');
     }
   } else {
@@ -823,8 +831,25 @@ function setupEventListeners() {
   // Hashtag quick insert
   btnAddHashtag?.addEventListener('click', () => {
     const val = memoTextarea.value;
+    if (val.endsWith('#')) {
+      memoTextarea.focus();
+      return;
+    }
     memoTextarea.value = val + (val.endsWith(' ') || val === '' ? '#' : ' #');
     memoTextarea.focus();
+  });
+  
+  // Random Memory Shuffle
+  homeRandomShuffle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (allPhotosCache.length > 0) {
+      const rand = allPhotosCache[Math.floor(Math.random() * allPhotosCache.length)];
+      homeRandomImg.src = rand.thumbnail_url || rand.thumbnailDataUrl;
+      homeRandomMemo.innerHTML = formatHashtags(rand.memo || '랜덤 추억');
+      homeRandomDate.textContent = formatDateShort(rand.date || rand.created_at) || '';
+      homeRandomLocation.textContent = rand.address || '';
+      homeRandomCard.dataset.pid = rand.id;
+    }
   });
   
   // Upload Save/Cancel
@@ -1535,10 +1560,40 @@ function updateHomeView() {
     const rand = allPhotosCache[Math.floor(Math.random() * allPhotosCache.length)];
     homeRandomCard.style.display = '';
     homeRandomImg.src = rand.thumbnail_url || rand.thumbnailDataUrl;
-    homeRandomMemo.textContent = rand.memo || '';
+    homeRandomMemo.innerHTML = formatHashtags(rand.memo || '랜덤 추억');
     homeRandomDate.textContent = formatDateShort(rand.date || rand.created_at) || '';
     homeRandomLocation.textContent = rand.address || '위치 미상';
+    homeRandomCard.dataset.pid = rand.id;
     currentRandomPhoto = rand;
+    
+    // 1 Year Ago Logic
+    if (home1YearCard) {
+      const today = new Date();
+      const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+      const marginDays = 3;
+      const minDate = new Date(oneYearAgo); minDate.setDate(minDate.getDate() - marginDays);
+      const maxDate = new Date(oneYearAgo); maxDate.setDate(maxDate.getDate() + marginDays);
+      
+      const oneYearPhotos = allPhotosCache.filter(p => {
+        const pDate = new Date(p.date || p.created_at);
+        return pDate >= minDate && pDate <= maxDate;
+      });
+
+      if (oneYearPhotos.length > 0) {
+        const p = oneYearPhotos[Math.floor(Math.random() * oneYearPhotos.length)];
+        home1YearCard.style.display = '';
+        home1YearImg.src = p.thumbnail_url || p.thumbnailDataUrl;
+        home1YearMemo.innerHTML = formatHashtags(p.memo || '1년 전 오늘');
+        home1YearDate.textContent = formatDateShort(p.date || p.created_at) || '';
+        home1YearLocation.textContent = p.address || '';
+        home1YearCard.dataset.pid = p.id;
+      } else {
+        home1YearCard.style.display = 'none';
+      }
+    }
+  } else {
+    homeRandomCard.style.display = 'none';
+    if (home1YearCard) home1YearCard.style.display = 'none';
   }
   
   // Monthly stats bars
