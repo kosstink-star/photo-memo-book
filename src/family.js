@@ -96,15 +96,34 @@ export async function getMyFamily() {
   };
 }
 
+// Helper to fetch profiles for members
+async function attachProfiles(members) {
+  if (!members || members.length === 0) return members;
+  const userIds = members.map(m => m.user_id);
+  const { data: profiles, error } = await supabase
+    .from('profiles')
+    .select('id, nickname, avatar_url')
+    .in('id', userIds);
+  
+  if (error) {
+    console.error('Error fetching profiles:', error);
+    return members.map(m => ({ ...m, profiles: null }));
+  }
+
+  const profileMap = {};
+  profiles.forEach(p => profileMap[p.id] = p);
+  return members.map(m => ({ ...m, profiles: profileMap[m.user_id] || null }));
+}
+
 // Get family members with their profiles
 export async function getFamilyMembers(familyId) {
   const { data, error } = await supabase
     .from('family_members')
-    .select('*, profiles:user_id(id, nickname, avatar_url)')
+    .select('*')
     .eq('family_id', familyId)
     .order('joined_at', { ascending: true });
   if (error) throw error;
-  return data;
+  return attachProfiles(data);
 }
 
 // Leave family
@@ -135,12 +154,12 @@ export async function getFamilyInviteCode(familyId) {
 export async function getPendingMembers(familyId) {
   const { data, error } = await supabase
     .from('family_members')
-    .select('*, profiles:user_id(id, nickname, avatar_url)')
+    .select('*')
     .eq('family_id', familyId)
     .eq('role', 'pending')
     .order('joined_at', { ascending: true });
   if (error) throw error;
-  return data;
+  return attachProfiles(data);
 }
 
 // Approve pending member
