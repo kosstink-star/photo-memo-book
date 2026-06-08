@@ -776,7 +776,8 @@ function setupEventListeners() {
   }
 
   // Settings
-  document.getElementById('btn-settings').addEventListener('click', () => {
+  document.getElementById('btn-settings').addEventListener('click', async () => {
+    await updateSettingsMembers(); // refresh pending members
     settingsModal.classList.add('active');
   });
   settingsModalClose.addEventListener('click', () => settingsModal.classList.remove('active'));
