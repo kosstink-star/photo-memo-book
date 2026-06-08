@@ -3,7 +3,8 @@ ALTER TABLE public.family_members DROP CONSTRAINT IF EXISTS family_members_role_
 ALTER TABLE public.family_members ADD CONSTRAINT family_members_role_check CHECK (role IN ('admin', 'member', 'pending'));
 
 -- 2. 헬퍼 함수 업데이트: 권한 체크 시 'pending' 상태인 멤버는 제외하도록 변경 (필수: 보안 강화)
-CREATE OR REPLACE FUNCTION public.is_family_member(family_uuid uuid)
+-- (SECURITY DEFINER 함수 내에서 auth.uid()가 올바르게 작동하도록 사용자 ID를 인자로 받습니다)
+CREATE OR REPLACE FUNCTION public.is_family_member(family_uuid uuid, user_uuid uuid DEFAULT auth.uid())
 RETURNS boolean
 LANGUAGE sql
 SECURITY definer
@@ -13,20 +14,18 @@ AS $$
     SELECT 1
     FROM public.family_members
     WHERE family_id = family_uuid
-      AND user_id = auth.uid()
+      AND user_id = user_uuid
       AND role IN ('admin', 'member')
   );
 $$;
 
 -- 3. family_members 데이터 조회 정책 업데이트
--- 기존 정책은 is_family_member()에 의존하고 있어서, 승인 대기 중(pending)인 사용자는 자신의 멤버십 정보를 볼 수 없게 됩니다.
--- 이를 해결하기 위해 승인 대기자도 "자신의" 가입 기록은 확인할 수 있도록 권한(RLS)을 변경합니다.
 DROP POLICY IF EXISTS "family_members_select" ON public.family_members;
 CREATE POLICY "family_members_select"
   ON public.family_members FOR SELECT
   TO authenticated
   USING (
-    public.is_family_member(family_id) 
+    public.is_family_member(family_id, auth.uid()) 
     OR user_id = auth.uid()
   );
 
