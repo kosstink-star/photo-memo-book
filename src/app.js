@@ -7,7 +7,7 @@ import { initMap, refreshMap, renderMarkers, cycleMapTheme, toggleJourneyLine, t
 // Supabase Modules
 import { supabase } from './supabase.js';
 import { signUp, signIn, signOut, getCurrentUser, onAuthStateChange, updateProfile } from './auth.js';
-import { createFamily, joinFamily, getMyFamily, getFamilyMembers, getFamilyInviteCode } from './family.js';
+import { createFamily, joinFamily, getMyFamily, getFamilyMembers, getFamilyInviteCode, getPendingMembers, approveMember, rejectMember } from './family.js';
 import { createAlbum, getAlbums, getAlbumPhotos, addPhotoToAlbum, removePhotoFromAlbum, deleteAlbum } from './albums.js';
 import { savePhoto, getAllPhotos, deletePhoto, updatePhoto, likePhoto, unlikePhoto, hasUserLiked, addComment, getComments, deleteComment, updateComment } from './storage.js';
 
@@ -19,6 +19,7 @@ const authScreen = document.getElementById('auth-screen');
 const authLogin = document.getElementById('auth-login');
 const authSignup = document.getElementById('auth-signup');
 const authFamily = document.getElementById('auth-family');
+const authPending = document.getElementById('auth-pending');
 
 const loginForm = document.getElementById('login-form');
 const loginEmail = document.getElementById('login-email');
@@ -253,10 +254,14 @@ async function checkFamilyStatus() {
   try {
     const family = await getMyFamily();
     if (family) {
-      currentFamily = family;
-      await fetchFamilyMembers();
-      showMainApp();
-      loadAppData();
+      if (family.myRole === 'pending') {
+        showAuthScreen('pending');
+      } else {
+        currentFamily = family;
+        await fetchFamilyMembers();
+        showMainApp();
+        loadAppData();
+      }
     } else {
       showAuthScreen('family');
     }
@@ -286,10 +291,12 @@ function showAuthScreen(type) {
   authLogin.classList.add('hidden');
   authSignup.classList.add('hidden');
   authFamily.classList.add('hidden');
+  authPending.classList.add('hidden');
 
   if (type === 'login') authLogin.classList.remove('hidden');
   else if (type === 'signup') authSignup.classList.remove('hidden');
   else if (type === 'family') authFamily.classList.remove('hidden');
+  else if (type === 'pending') authPending.classList.remove('hidden');
 }
 
 function showMainApp() {
@@ -340,8 +347,9 @@ function updateHeaderAvatars() {
   headerFamilyAvatars.innerHTML = familyMembers.map(m => generateAvatarHtml(m.profiles, 'small')).join('');
 }
 
-function updateSettingsMembers() {
+async function updateSettingsMembers() {
   if (!settingsMembersList || !familyMembers) return;
+  
   settingsMembersList.innerHTML = familyMembers.map(m => {
     const isMe = m.user_id === currentUser.id;
     return `
@@ -352,6 +360,70 @@ function updateSettingsMembers() {
       </div>
     `;
   }).join('');
+
+  const pendingSection = document.getElementById('settings-pending-section');
+  const pendingList = document.getElementById('settings-pending-list');
+  
+  if (currentFamily && currentFamily.myRole === 'admin') {
+    try {
+      const pendingMembers = await getPendingMembers(currentFamily.id);
+      if (pendingMembers && pendingMembers.length > 0) {
+        pendingSection.classList.remove('hidden');
+        pendingList.innerHTML = pendingMembers.map(m => `
+          <div class="family-member-item justify-between">
+            <div class="flex items-center gap-3">
+              ${generateAvatarHtml(m.profiles, 'small')}
+              <span class="member-name">${m.profiles.nickname}</span>
+            </div>
+            <div class="flex gap-2">
+              <button class="px-3 py-1 bg-primary text-on-primary rounded text-xs hover:brightness-110 btn-approve-member" data-uid="${m.user_id}">승인</button>
+              <button class="px-3 py-1 bg-error text-white rounded text-xs hover:brightness-110 btn-reject-member" data-uid="${m.user_id}">거절</button>
+            </div>
+          </div>
+        `).join('');
+
+        // Attach events
+        pendingList.querySelectorAll('.btn-approve-member').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const uid = e.target.getAttribute('data-uid');
+            try {
+              e.target.disabled = true;
+              await approveMember(currentFamily.id, uid);
+              showToast('가입을 승인했습니다.');
+              await fetchFamilyMembers();
+            } catch (err) {
+              console.error(err);
+              showToast('승인 처리 중 오류가 발생했습니다.');
+              e.target.disabled = false;
+            }
+          });
+        });
+
+        pendingList.querySelectorAll('.btn-reject-member').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const uid = e.target.getAttribute('data-uid');
+            try {
+              e.target.disabled = true;
+              await rejectMember(currentFamily.id, uid);
+              showToast('가입을 거절했습니다.');
+              await fetchFamilyMembers();
+            } catch (err) {
+              console.error(err);
+              showToast('거절 처리 중 오류가 발생했습니다.');
+              e.target.disabled = false;
+            }
+          });
+        });
+      } else {
+        pendingSection.classList.add('hidden');
+      }
+    } catch (err) {
+      console.error('Error loading pending members', err);
+      pendingSection.classList.add('hidden');
+    }
+  } else {
+    pendingSection.classList.add('hidden');
+  }
 }
 
 function formatDate(isoString) {
@@ -442,6 +514,15 @@ function setupAuthEvents() {
   });
 
   familyLogoutBtn.addEventListener('click', () => signOut());
+
+  // Pending Screen Actions
+  document.getElementById('pending-refresh-btn').addEventListener('click', async () => {
+    document.getElementById('pending-refresh-btn').classList.add('auth-loading');
+    await checkFamilyStatus();
+    document.getElementById('pending-refresh-btn').classList.remove('auth-loading');
+  });
+
+  document.getElementById('pending-logout-btn').addEventListener('click', () => signOut());
   btnLogout.addEventListener('click', () => {
     settingsModal.classList.remove('active');
     signOut();

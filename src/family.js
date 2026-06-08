@@ -68,10 +68,10 @@ export async function joinFamily(inviteCode) {
     .single();
   if (existing) throw new Error('이미 가족 구성원입니다.');
 
-  // Join as member
+  // Join as pending member (requires admin approval)
   const { error: joinError } = await supabase
     .from('family_members')
-    .insert({ family_id: family.id, user_id: user.id, role: 'member' });
+    .insert({ family_id: family.id, user_id: user.id, role: 'pending' });
   if (joinError) throw joinError;
 
   return family;
@@ -129,4 +129,36 @@ export async function getFamilyInviteCode(familyId) {
     .single();
   if (error) throw error;
   return data.invite_code;
+}
+
+// Get pending family members
+export async function getPendingMembers(familyId) {
+  const { data, error } = await supabase
+    .from('family_members')
+    .select('*, profiles:user_id(id, nickname, avatar_url)')
+    .eq('family_id', familyId)
+    .eq('role', 'pending')
+    .order('joined_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+// Approve pending member
+export async function approveMember(familyId, userId) {
+  const { error } = await supabase
+    .from('family_members')
+    .update({ role: 'member' })
+    .eq('family_id', familyId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+// Reject pending member
+export async function rejectMember(familyId, userId) {
+  const { error } = await supabase
+    .from('family_members')
+    .delete()
+    .eq('family_id', familyId)
+    .eq('user_id', userId);
+  if (error) throw error;
 }
