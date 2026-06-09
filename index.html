@@ -448,15 +448,17 @@
             </div>
             <div class="col-span-4 md:col-span-8" id="memo-section">
               <div class="glass-surface glass-edge rounded-lg p-card-padding h-full">
-                <div class="flex items-center gap-3 mb-6">
+                <div class="flex items-center gap-3 mb-4">
                   <span class="material-symbols-outlined text-primary-container text-[24px]">edit_note</span>
                   <h2 class="font-title-md text-title-md text-white">메모 남기기</h2>
-                  <button id="btn-add-hashtag" class="ml-auto px-3 py-1.5 rounded-full border border-white/20 bg-white/5 text-on-surface-variant text-body-sm hover:bg-white/10 hover:text-white flex items-center gap-1.5 transition-all">
+                </div>
+                <div class="relative w-full">
+                  <textarea id="memo-textarea" placeholder="이 순간에 대한 메모를 남겨보세요..." maxlength="500"
+                    class="w-full min-h-[200px] bg-transparent border border-white/10 rounded-lg p-5 pb-14 text-on-surface text-body-lg placeholder-on-surface-variant/50 focus:outline-none focus:border-primary-container/50 resize-none transition-colors"></textarea>
+                  <button id="btn-add-hashtag" class="absolute bottom-3 right-3 px-3.5 py-1.5 rounded-full border border-white/20 bg-surface/80 backdrop-blur-md text-white/90 text-sm hover:bg-white/20 hover:text-white flex items-center gap-1.5 transition-all active:scale-95 shadow-lg z-10">
                     <span class="text-primary-container font-bold text-base leading-none">#</span> 해시태그 추가
                   </button>
                 </div>
-                <textarea id="memo-textarea" placeholder="이 순간에 대한 메모를 남겨보세요..." maxlength="500"
-                  class="w-full min-h-[200px] bg-transparent border border-white/10 rounded-lg p-6 text-on-surface text-body-lg placeholder-on-surface-variant/50 focus:outline-none focus:border-primary-container/50 resize-none transition-colors"></textarea>
                 <div class="mt-6 flex justify-end gap-4">
                   <button class="px-8 py-3 rounded-full glass-surface border border-white/20 text-on-surface-variant font-label-caps text-label-caps hover:bg-white/10 transition-all active:scale-95" id="btn-cancel">취소</button>
                   <button class="px-8 py-3 rounded-full bg-primary-container text-on-primary-container font-title-md hover:brightness-110 transition-all active:scale-95 cyan-glow" id="btn-save">
@@ -860,18 +862,21 @@
           <!-- Memo Content -->
           <div class="md:col-span-8">
             <div class="glass-surface glass-edge rounded-lg p-card-padding h-full flex flex-col">
-              <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-3 flex-1">
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary-container">edit_note</span>
                   <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-white">메모</h2>
-                  <button id="photo-modal-add-hashtag-btn" class="hidden ml-auto px-3 py-1.5 rounded-full border border-white/20 bg-white/5 text-on-surface-variant text-body-sm hover:bg-white/10 hover:text-white flex items-center gap-1.5 transition-all mr-2">
-                    <span class="text-primary-container font-bold text-base leading-none">#</span> 해시태그 추가
-                  </button>
                 </div>
-                <button class="hidden px-4 py-2 bg-primary text-on-primary rounded-full font-title-md text-sm hover:brightness-110 transition-all active:scale-95 flex-shrink-0" id="photo-modal-save-btn">저장하기</button>
+                <button class="hidden px-5 py-2 bg-primary text-on-primary rounded-full font-title-md text-sm hover:brightness-110 transition-all active:scale-95 flex-shrink-0 shadow-lg" id="photo-modal-save-btn">저장하기</button>
               </div>
-              <p class="font-body-lg text-body-lg text-on-surface leading-relaxed opacity-90 flex-1 whitespace-pre-wrap" id="photo-modal-memo">메모가 없습니다.</p>
-              <textarea class="hidden w-full bg-white/5 border border-white/10 rounded-lg p-4 text-white resize-y" rows="4" id="photo-modal-memo-textarea" placeholder="추억을 메모해 보세요..."></textarea>
+              <p class="font-body-lg text-body-lg text-on-surface leading-relaxed opacity-90 flex-1 whitespace-pre-wrap mb-2" id="photo-modal-memo">메모가 없습니다.</p>
+              
+              <div class="relative w-full flex-shrink-0">
+                <textarea class="hidden w-full min-h-[150px] bg-white/5 border border-white/10 rounded-lg p-4 pb-12 text-white resize-y focus:outline-none focus:border-primary/50" id="photo-modal-memo-textarea" placeholder="추억을 메모해 보세요..."></textarea>
+                <button id="photo-modal-add-hashtag-btn" class="hidden absolute bottom-3 right-3 px-3 py-1.5 rounded-full border border-white/20 bg-surface/80 backdrop-blur-md text-white/90 text-sm hover:bg-white/20 hover:text-white flex items-center gap-1.5 transition-all active:scale-95 shadow-lg z-10">
+                  <span class="text-primary-container font-bold leading-none">#</span> 해시태그 추가
+                </button>
+              </div>
             </div>
 
             <!-- Comments Section -->
