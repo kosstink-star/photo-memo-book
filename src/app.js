@@ -187,6 +187,7 @@ const photoModalFavorite = document.getElementById('photo-modal-favorite');
 const photoModalExport = document.getElementById('photo-modal-export');
 const photoModalMemoTextarea = document.getElementById('photo-modal-memo-textarea');
 const photoModalSaveBtn = document.getElementById('photo-modal-save-btn');
+const photoModalAddHashtagBtn = document.getElementById('photo-modal-add-hashtag-btn');
 const albumCreateModal = document.getElementById('album-create-modal');
 const addToAlbumModal = document.getElementById('add-to-album-modal');
 const addToAlbumList = document.getElementById('add-to-album-list');
@@ -839,6 +840,16 @@ function setupEventListeners() {
     memoTextarea.focus();
   });
   
+  photoModalAddHashtagBtn?.addEventListener('click', () => {
+    const val = photoModalMemoTextarea.value;
+    if (val.endsWith('#')) {
+      photoModalMemoTextarea.focus();
+      return;
+    }
+    photoModalMemoTextarea.value = val + (val.endsWith(' ') || val === '' ? '#' : ' #');
+    photoModalMemoTextarea.focus();
+  });
+  
   // Random Memory Shuffle
   homeRandomShuffle?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -877,6 +888,7 @@ function setupEventListeners() {
             photoModalLocationInput.classList.add('hidden');
           }
           photoModalSaveBtn.classList.add('hidden');
+          if (photoModalAddHashtagBtn) photoModalAddHashtagBtn.classList.add('hidden');
         }
       });
     }
@@ -909,6 +921,7 @@ function setupEventListeners() {
       photoModalLocation.classList.add('hidden');
       photoModalLocationInput.classList.remove('hidden');
       photoModalSaveBtn.classList.remove('hidden');
+      if (photoModalAddHashtagBtn) photoModalAddHashtagBtn.classList.remove('hidden');
       
       photoModalMemoTextarea.value = currentEditingPhoto.memo || '';
       photoModalDateInput.value = currentEditingPhoto.date ? new Date(currentEditingPhoto.date).toISOString().split('T')[0] : '';
@@ -961,6 +974,7 @@ function setupEventListeners() {
         photoModalLocation.classList.remove('hidden');
         photoModalLocationInput.classList.add('hidden');
         photoModalSaveBtn.classList.add('hidden');
+        if (photoModalAddHashtagBtn) photoModalAddHashtagBtn.classList.add('hidden');
         
         renderTimeline();
         showToast('추억 정보가 수정되었습니다.');

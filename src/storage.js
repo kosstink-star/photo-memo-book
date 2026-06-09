@@ -220,13 +220,14 @@ export async function updatePhoto(id, updates) {
     .update(updates)
     .eq('id', id)
     .select('*')
-    .single();
+    .maybeSingle();
   if (error) throw error;
+  const row = data || updates; // fallback if it returned null
   return {
-    ...data,
-    thumbnailDataUrl: data.thumbnail_url,
-    imageDataUrl: data.image_url,
-    createdAt: new Date(data.created_at).getTime(),
+    ...row,
+    thumbnailDataUrl: row.thumbnail_url,
+    imageDataUrl: row.image_url,
+    createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
     likesCount: 0,
     commentsCount: 0,
     uploaderNickname: '멤버',
@@ -272,7 +273,7 @@ export async function hasUserLiked(photoId) {
     .select('id')
     .eq('photo_id', photoId)
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
   return !!data;
 }
 
