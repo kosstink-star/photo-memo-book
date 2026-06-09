@@ -242,13 +242,14 @@ export async function updatePhoto(id, updates) {
 }
 
 // ── Likes ──
-export async function likePhoto(photoId) {
+export async function likePhoto(photoId, reactionType = 'like') {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
+  // Upsert to handle changing reactions
   const { error } = await supabase
     .from('photo_likes')
-    .insert({ photo_id: photoId, user_id: user.id });
-  if (error && error.code !== '23505') throw error; // ignore duplicate
+    .upsert({ photo_id: photoId, user_id: user.id, reaction_type: reactionType }, { onConflict: 'photo_id,user_id' });
+  if (error) throw error;
 }
 
 export async function unlikePhoto(photoId) {

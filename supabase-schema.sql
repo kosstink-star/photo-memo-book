@@ -520,3 +520,7 @@ create policy "storage_photos_delete"
     bucket_id = 'photos'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+
+-- Migration: Add reaction_type for emoji reactions (Phase 2)
+ALTER TABLE public.photo_likes ADD COLUMN reaction_type text DEFAULT 'like';

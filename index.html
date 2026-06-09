@@ -23,6 +23,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body class="font-body-lg text-body-lg min-h-screen pb-24">
 
@@ -491,7 +492,17 @@
               </select>
             </div>
           </div>
+          
+            <div class="mt-4 flex justify-end">
+              <select id="timeline-sort-select" class="bg-surface-container border border-white/20 rounded-lg px-3 py-2 text-on-surface text-body-sm focus:outline-none focus:border-primary-container/50 cursor-pointer">
+                <option value="desc">최신순</option>
+                <option value="asc">오래된순</option>
+                <option value="likes">인기순 (좋아요)</option>
+              </select>
+            </div>
+          </div>
           <div class="grid grid-cols-4 md:grid-cols-12 gap-grid-gutter" id="timeline-grid"></div>
+
           
           <!-- Infinite Scroll Sentinel -->
           <div id="timeline-sentinel" class="col-span-4 md:col-span-12 flex justify-center py-6 hidden">

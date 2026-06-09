@@ -232,6 +232,7 @@ let currentMapFilter = 'all';
 let currentRandomPhoto = null;
 let currentAlbumView = null;
 let currentTimelineFilter = 'all';
+let currentTimelineSort = 'desc';
 let currentTimelineLocation = '';
 let currentTimelineLimit = 20;
 
@@ -405,6 +406,23 @@ function updateHeaderAvatars() {
 async function updateSettingsMembers() {
   if (!settingsMembersList || !familyMembers) return;
   
+  
+  const storageUsageEl = document.getElementById('settings-storage-usage');
+  if (storageUsageEl) {
+    try {
+      const { data, error } = await supabase.storage.from('family-photos').list(currentFamily.id);
+      if (!error && data) {
+        const totalBytes = data.reduce((acc, file) => acc + (file.metadata?.size || 0), 0);
+        const mb = (totalBytes / (1024 * 1024)).toFixed(1);
+        storageUsageEl.textContent = `${mb} MB`;
+      } else {
+        storageUsageEl.textContent = '알 수 없음';
+      }
+    } catch(e) {
+      storageUsageEl.textContent = '오류';
+    }
+  }
+
   settingsMembersList.innerHTML = familyMembers.map(m => {
     const isMe = m.user_id === currentUser.id;
     const nickname = m.profiles?.nickname || '알 수 없음';
@@ -419,6 +437,20 @@ async function updateSettingsMembers() {
 
   const pendingSection = document.getElementById('settings-pending-section');
   const pendingList = document.getElementById('settings-pending-list');
+
+  const qrContainer = document.getElementById('qrcode-container');
+  if (qrContainer && currentFamily && currentFamily.invite_code) {
+    qrContainer.innerHTML = '';
+    new QRCode(qrContainer, {
+      text: window.location.origin + window.location.pathname + '?invite=' + currentFamily.invite_code,
+      width: 128,
+      height: 128,
+      colorDark : "#000000",
+      colorLight : "#ffffff",
+      correctLevel : QRCode.CorrectLevel.H
+    });
+  }
+
   
   if (currentFamily && currentFamily.myRole === 'admin') {
     try {
@@ -659,6 +691,61 @@ function switchView(view) {
 // Event Listeners (Main App)
 // ──────────────────────────────────────
 function setupEventListeners() {
+
+  const photoModalLikeBtn2 = document.getElementById('photo-modal-like-btn');
+  const emojiPicker = document.getElementById('emoji-picker');
+  
+  if (photoModalLikeBtn2 && emojiPicker) {
+    let hideTimeout;
+    photoModalLikeBtn2.addEventListener('mouseenter', () => {
+      clearTimeout(hideTimeout);
+      emojiPicker.classList.remove('hidden');
+    });
+    photoModalLikeBtn2.addEventListener('mouseleave', () => {
+      hideTimeout = setTimeout(() => emojiPicker.classList.add('hidden'), 500);
+    });
+    emojiPicker.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+    emojiPicker.addEventListener('mouseleave', () => {
+      hideTimeout = setTimeout(() => emojiPicker.classList.add('hidden'), 500);
+    });
+    
+    emojiPicker.querySelectorAll('.reaction-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if(!currentEditingPhoto) return;
+        const emoji = btn.dataset.emoji;
+        const icon = document.getElementById('photo-modal-like-icon');
+        const countEl = document.getElementById('photo-modal-like-count');
+        
+        emojiPicker.classList.add('hidden');
+        
+        // Optimistic
+        icon.textContent = emoji;
+        icon.classList.add('like-pop');
+        setTimeout(() => icon.classList.remove('like-pop'), 400);
+        
+        let currentCount = parseInt(countEl.textContent || '0');
+        if (!icon.classList.contains('like-active')) {
+          currentCount++;
+          icon.classList.add('like-active');
+          countEl.textContent = currentCount;
+        }
+        
+        try {
+          await likePhoto(currentEditingPhoto.id, emoji);
+          const likesCount = await getPhotoLikes(currentEditingPhoto.id);
+          countEl.textContent = likesCount;
+          
+          const cardHeart = document.querySelector(`.timeline-card[data-id="${currentEditingPhoto.id}"] .timeline-card-info button`);
+          if (cardHeart) cardHeart.innerHTML = `<span class="material-symbols-outlined text-[16px]">favorite</span> ${likesCount}`;
+        } catch(e) {
+          console.error(e);
+          showToast('리액션 실패');
+        }
+      });
+    });
+  }
+
   // Swipe Gestures for Photo Modal
   let modalTouchStartX = 0;
   let modalTouchEndX = 0;
@@ -1332,6 +1419,15 @@ function renderTimeline() {
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     photos = photos.filter(p => (p.memo?.toLowerCase().includes(q) || p.address?.toLowerCase().includes(q)));
+  }
+
+  
+  if (currentTimelineSort === 'asc') {
+    photos.sort((a, b) => new Date(a.date || a.created_at) - new Date(b.date || b.created_at));
+  } else if (currentTimelineSort === 'likes') {
+    photos.sort((a, b) => (b.photo_likes?.[0]?.count || 0) - (a.photo_likes?.[0]?.count || 0));
+  } else {
+    photos.sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at));
   }
 
   const now = new Date();
