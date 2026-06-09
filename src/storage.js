@@ -221,8 +221,14 @@ export async function updatePhoto(id, updates) {
     .eq('id', id)
     .select('*')
     .maybeSingle();
+    
   if (error) throw error;
-  const row = data || updates; // fallback if it returned null
+  
+  if (!data) {
+    throw new Error('수정 권한이 없거나(본인 사진만 수정 가능) 사진을 찾을 수 없습니다.');
+  }
+
+  const row = data;
   return {
     ...row,
     thumbnailDataUrl: row.thumbnail_url,
