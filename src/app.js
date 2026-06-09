@@ -1297,6 +1297,30 @@ async function handleFilesSelect(files) {
   }
 }
 
+
+async function compressDataUrlToWebP(dataUrl, maxDim = 1920, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+      if (width > height) {
+        if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
+      } else {
+        if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/webp', quality));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
 async function processSingleFile(file) {
   const isHeic = file.name.toLowerCase().match(/\.hei(c|f)$/i) || file.type === 'image/heic';
   if (!file.type.startsWith('image/') && !isHeic) return showToast('이미지만 가능합니다.');
@@ -1320,8 +1344,17 @@ async function processSingleFile(file) {
     currentFileName = file.name;
     
     const reader = new FileReader();
-    reader.onload = (e) => {
-      currentFileBase64 = e.target.result;
+    reader.onload = async (e) => {
+      
+      try {
+        uploadLoading.querySelector('p').textContent = '이미지 최적화 중...';
+        uploadLoading.classList.add('active', 'flex');
+        currentFileBase64 = await compressDataUrlToWebP(e.target.result);
+      } catch (err) {
+        console.error('Compression failed:', err);
+        currentFileBase64 = e.target.result;
+      }
+
       
       uploadLoading.classList.remove('active', 'flex');
       uploadContent.classList.remove('hidden');
