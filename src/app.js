@@ -9,7 +9,7 @@ import { supabase } from './supabase.js';
 import { signUp, signIn, signOut, getCurrentUser, onAuthStateChange, updateProfile } from './auth.js';
 import { createFamily, joinFamily, getMyFamily, getFamilyMembers, getFamilyInviteCode, getPendingMembers, approveMember, rejectMember } from './family.js';
 import { createAlbum, getAlbums, getAlbumPhotos, addPhotoToAlbum, removePhotoFromAlbum, deleteAlbum } from './albums.js';
-import { savePhoto, getAllPhotos, deletePhoto, updatePhoto, likePhoto, unlikePhoto, hasUserLiked, addComment, getComments, deleteComment, updateComment } from './storage.js';
+import { savePhoto, getAllPhotos, deletePhoto, updatePhoto, likePhoto, unlikePhoto, hasUserLiked } from './storage.js';
 
 // ──────────────────────────────────────
 // DOM References
@@ -1058,22 +1058,6 @@ function setupEventListeners() {
     currentAlbumView = null;
   });
 
-  // Comments Input
-  document.getElementById('photo-modal-comment-submit').addEventListener('click', async () => {
-    const input = document.getElementById('photo-modal-comment-input');
-    const content = input.value.trim();
-    if(!content || !currentEditingPhoto) return;
-    try {
-      await addComment(currentEditingPhoto.id, content);
-      input.value = '';
-      loadComments(currentEditingPhoto.id);
-      loadAppData(); // Refresh timeline counts
-    } catch (e) {
-      console.error(e);
-      showToast('댓글 작성 실패: ' + (e?.message || ''));
-    }
-  });
-
 
 
   // Like Button
@@ -1287,7 +1271,7 @@ function renderTimeline() {
         </div>
         <div class="timeline-card-social">
           <button><span class="material-symbols-outlined text-[16px]">favorite</span> ${photo.photo_likes?.[0]?.count || 0}</button>
-          <button><span class="material-symbols-outlined text-[16px]">chat_bubble</span> ${photo.photo_comments?.[0]?.count || 0}</button>
+
           <div class="uploader-info">
             ${generateAvatarHtml(uploaderProfile, 'small')}
             <span>${uploaderProfile?.nickname || 'User'}</span>
@@ -1362,7 +1346,7 @@ async function openPhotoModal(photo) {
       if (countEl) countEl.textContent = '0';
     }
     
-    loadComments(photo.id);
+
     
     if (photoModal) {
       photoModal.classList.add('active');
@@ -1375,67 +1359,7 @@ async function openPhotoModal(photo) {
   }
 }
 
-async function loadComments(photoId) {
-  const list = document.getElementById('photo-modal-comments-list');
-  if (!list) return;
-  list.innerHTML = '<div class="text-center text-on-surface-variant text-sm py-2">불러오는 중...</div>';
-  try {
-    const comments = await getComments(photoId);
-    document.getElementById('photo-modal-comment-count').textContent = comments.length;
-    
-    if (comments.length === 0) {
-      list.innerHTML = '<div class="text-center text-on-surface-variant text-sm py-2">첫 댓글을 남겨보세요!</div>';
-      return;
-    }
-    
-    list.innerHTML = comments.map(c => {
-      const isMine = c.user_id === currentUser.id;
-      const authorProfile = familyMembers.find(m => m.user_id === c.user_id)?.profiles || { nickname: '사용자', avatar_url: null };
-      return `
-        <div class="comment-item">
-          <div class="comment-avatar">${generateAvatarHtml(authorProfile, 'small')}</div>
-          <div class="comment-body">
-            <div class="comment-header">
-              <span class="comment-author">${authorProfile.nickname}</span>
-              <span class="comment-time">${formatDateShort(c.created_at)}</span>
-              <div class="flex items-center gap-2 ml-2">
-                ${isMine ? `<button class="comment-edit text-on-surface-variant hover:text-primary transition-colors" data-cid="${c.id}" data-content="${c.content}"><span class="material-symbols-outlined text-[14px]">edit</span></button>
-                            <button class="comment-delete text-on-surface-variant hover:text-error transition-colors" data-cid="${c.id}"><span class="material-symbols-outlined text-[14px]">delete</span></button>` : ''}
-              </div>
-            </div>
-            <div class="comment-text">${c.content}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-    
-    list.querySelectorAll('.comment-delete').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if(confirm('댓글을 삭제할까요?')) {
-          await deleteComment(btn.dataset.cid);
-          loadComments(photoId);
-          loadAppData();
-        }
-      });
-    });
 
-    list.querySelectorAll('.comment-edit').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const newContent = prompt('댓글을 수정하세요:', btn.dataset.content);
-        if(newContent && newContent.trim() !== '' && newContent !== btn.dataset.content) {
-          try {
-            await updateComment(btn.dataset.cid, newContent.trim());
-            loadComments(photoId);
-          } catch(e) {
-            showToast('댓글 수정 실패: ' + (e?.message || ''));
-          }
-        }
-      });
-    });
-  } catch(e) {
-    list.innerHTML = '<div class="text-error text-sm py-2">댓글을 불러오지 못했습니다.</div>';
-  }
-}
 
 // ──────────────────────────────────────
 // Albums View
