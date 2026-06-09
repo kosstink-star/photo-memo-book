@@ -143,7 +143,7 @@ export async function savePhoto(photoData, familyId) {
 export async function getAllPhotos(familyId) {
   const { data, error } = await supabase
     .from('photos')
-    .select('*')
+    .select('*, photo_likes(count), photo_comments(count)')
     .eq('family_id', familyId)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -154,8 +154,8 @@ export async function getAllPhotos(familyId) {
     thumbnailDataUrl: p.thumbnail_url,
     imageDataUrl: p.image_url,
     createdAt: new Date(p.created_at).getTime(),
-    likesCount: 0,
-    commentsCount: 0,
+    likesCount: p.photo_likes?.[0]?.count || 0,
+    commentsCount: p.photo_comments?.[0]?.count || 0,
     uploaderNickname: '멤버',
     uploaderAvatar: null,
   }));

@@ -1129,6 +1129,29 @@ section:hover .favorite-btn-card {
   color: var(--color-error);
 }
 
+/* ── Comment Input (force visibility on iOS Safari) ── */
+#photo-modal-comment-input {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  caret-color: #00f0ff !important;
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+  opacity: 1 !important;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+#photo-modal-comment-input::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.4) !important;
+}
+#photo-modal-comment-input:focus {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  outline: none !important;
+}
+
 /* ══════════════════════════════════════════
    ALBUMS VIEW GRID
    ══════════════════════════════════════════ */
