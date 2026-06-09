@@ -233,6 +233,7 @@ let currentRandomPhoto = null;
 let currentAlbumView = null;
 let currentTimelineFilter = 'all';
 let currentTimelineLocation = '';
+let currentTimelineLimit = 20;
 
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
@@ -243,6 +244,8 @@ let calSelectedDate = null;
 // ──────────────────────────────────────
 function init() {
   setupEventListeners();
+  setupPullToRefresh();
+  setupInfiniteScroll();
 
   // Listen for auth state changes
   onAuthStateChange(async (event, session) => {
@@ -255,6 +258,49 @@ function init() {
       showAuthScreen('login');
     }
   });
+}
+
+function setupInfiniteScroll() {
+  const sentinel = document.getElementById('timeline-sentinel');
+  if (!sentinel) return;
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      if (currentTimelineLimit < allPhotosCache.length) {
+        currentTimelineLimit += 20;
+        renderTimeline();
+      }
+    }
+  }, { rootMargin: '100px' });
+  observer.observe(sentinel);
+}
+
+function setupPullToRefresh() {
+  const mainContent = document.getElementById('main-content');
+  if (!mainContent) return;
+  let startY = 0;
+  let isPulling = false;
+  
+  mainContent.addEventListener('touchstart', e => {
+    if (mainContent.scrollTop === 0) {
+      startY = e.touches[0].clientY;
+      isPulling = true;
+    }
+  }, { passive: true });
+  
+  mainContent.addEventListener('touchmove', e => {
+    if (!isPulling) return;
+    const y = e.touches[0].clientY;
+    if (y - startY > 100) {
+      // Trigger refresh visually
+      showToast('새로고침 중...');
+      isPulling = false;
+      loadAppData();
+    }
+  }, { passive: true });
+  
+  mainContent.addEventListener('touchend', () => {
+    isPulling = false;
+  }, { passive: true });
 }
 
 async function checkFamilyStatus() {
@@ -325,6 +371,7 @@ function showMainApp() {
 async function loadAppData() {
   try {
     allPhotosCache = await getAllPhotos(currentFamily.id);
+    currentTimelineLimit = 20;
     renderTimeline();
     updateHomeView();
     if (currentView === 'albums') renderAlbumsView();
@@ -612,6 +659,51 @@ function switchView(view) {
 // Event Listeners (Main App)
 // ──────────────────────────────────────
 function setupEventListeners() {
+  // Swipe Gestures for Photo Modal
+  let modalTouchStartX = 0;
+  let modalTouchEndX = 0;
+  
+  if (photoModalImg) {
+    photoModalImg.addEventListener('touchstart', e => {
+      modalTouchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+    
+    photoModalImg.addEventListener('touchend', e => {
+      modalTouchEndX = e.changedTouches[0].screenX;
+      handleModalSwipe();
+    }, { passive: true });
+  }
+
+  function handleModalSwipe() {
+    if (!currentEditingPhoto) return;
+    const swipeThreshold = 50;
+    const diff = modalTouchEndX - modalTouchStartX;
+    
+    if (Math.abs(diff) < swipeThreshold) return;
+    
+    // Determine context (allPhotosCache or a filtered list)
+    // For simplicity, we swipe through allPhotosCache since modal doesn't know its parent list context perfectly without extra state.
+    // However, timeline rendering filters photos. Let's just use allPhotosCache for now.
+    const currentIndex = allPhotosCache.findIndex(p => p.id === currentEditingPhoto.id);
+    if (currentIndex === -1) return;
+    
+    if (diff > 0) {
+      // Swiped right -> Previous photo
+      if (currentIndex > 0) {
+        openPhotoModal(allPhotosCache[currentIndex - 1]);
+      } else {
+        showToast('첫 번째 사진입니다');
+      }
+    } else {
+      // Swiped left -> Next photo
+      if (currentIndex < allPhotosCache.length - 1) {
+        openPhotoModal(allPhotosCache[currentIndex + 1]);
+      } else {
+        showToast('마지막 사진입니다');
+      }
+    }
+  }
+
   setupAuthEvents();
   
   const mapSheetClose = document.getElementById('map-sheet-close');
@@ -1065,23 +1157,41 @@ function setupEventListeners() {
     if(!currentEditingPhoto) return;
     const icon = document.getElementById('photo-modal-like-icon');
     const isLiked = icon.classList.contains('like-active');
+    const countEl = document.getElementById('photo-modal-like-count');
     
+    // Optimistic Update
+    icon.classList.toggle('like-active', !isLiked);
     icon.classList.add('like-pop');
     setTimeout(() => icon.classList.remove('like-pop'), 400);
+    
+    let currentCount = parseInt(countEl.textContent || '0');
+    currentCount = isLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
+    countEl.textContent = currentCount;
+    
+    // Update cache
+    const photoIndex = allPhotosCache.findIndex(p => p.id === currentEditingPhoto.id);
+    if(photoIndex !== -1) {
+      if (!allPhotosCache[photoIndex].photo_likes) allPhotosCache[photoIndex].photo_likes = [{count: 0}];
+      allPhotosCache[photoIndex].photo_likes[0].count = currentCount;
+    }
 
     try {
       if (isLiked) {
         await unlikePhoto(currentEditingPhoto.id, currentUser.id);
-        icon.classList.remove('like-active');
       } else {
         await likePhoto(currentEditingPhoto.id, currentUser.id);
-        icon.classList.add('like-active');
       }
       const likesCount = await getPhotoLikes(currentEditingPhoto.id);
-      document.getElementById('photo-modal-like-count').textContent = likesCount;
-      loadAppData();
+      countEl.textContent = likesCount;
+      if(photoIndex !== -1) allPhotosCache[photoIndex].photo_likes[0].count = likesCount;
+      
+      const cardHeart = document.querySelector(`.timeline-card[data-id="${currentEditingPhoto.id}"] .timeline-card-info button`);
+      if (cardHeart) cardHeart.innerHTML = `<span class="material-symbols-outlined text-[16px]">favorite</span> ${likesCount}`;
     } catch (e) {
       console.error(e);
+      icon.classList.toggle('like-active', isLiked);
+      countEl.textContent = isLiked ? currentCount + 1 : currentCount - 1;
+      showToast('좋아요 처리에 실패했습니다');
     }
   });
 }
@@ -1241,16 +1351,18 @@ function renderTimeline() {
     photos = photos.filter(p => p.address === currentTimelineLocation);
   }
 
-  photoCountBadge.textContent = `${photos.length}개의 기록`;
+  photoCountBadge.textContent = `${photos.length}개 추억`;
   
   if (photos.length === 0) {
     timelineGrid.innerHTML = '';
     timelineEmptyState.classList.remove('hidden');
+    document.getElementById('timeline-sentinel').classList.add('hidden');
     return;
   }
   timelineEmptyState.classList.add('hidden');
 
-  timelineGrid.innerHTML = photos.map((photo, idx) => {
+    const photosToRender = photos.slice(0, currentTimelineLimit);
+  timelineGrid.innerHTML = photosToRender.map((photo, idx) => {
     const isLarge = idx === 0 && !searchQuery;
     const colSpan = isLarge ? 'col-span-4 md:col-span-6' : 'col-span-2 md:col-span-4';
     
@@ -1280,6 +1392,37 @@ function renderTimeline() {
       </section>
     `;
   }).join('');
+
+  const sentinel = document.getElementById('timeline-sentinel');
+  if (photos.length > currentTimelineLimit) {
+    sentinel.classList.remove('hidden');
+  } else {
+    sentinel.classList.add('hidden');
+  }
+
+  timelineGrid.querySelectorAll('.favorite-btn-card').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const pid = btn.dataset.favId;
+      try {
+        const photoIndex = allPhotosCache.findIndex(p => p.id === pid);
+        if (photoIndex === -1) return;
+        
+        const newFavStatus = !allPhotosCache[photoIndex].favorite;
+        allPhotosCache[photoIndex].favorite = newFavStatus;
+        if (newFavStatus) {
+          btn.classList.add('is-fav');
+        } else {
+          btn.classList.remove('is-fav');
+        }
+        
+        await updatePhoto(pid, { favorite: newFavStatus });
+      } catch (e) {
+        console.error('Favorite error:', e);
+        showToast('즐겨찾기 실패');
+      }
+    });
+  });
 
   timelineGrid.querySelectorAll('.timeline-card').forEach(card => {
     card.addEventListener('click', (e) => {

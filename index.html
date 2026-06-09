@@ -492,6 +492,11 @@
             </div>
           </div>
           <div class="grid grid-cols-4 md:grid-cols-12 gap-grid-gutter" id="timeline-grid"></div>
+          
+          <!-- Infinite Scroll Sentinel -->
+          <div id="timeline-sentinel" class="col-span-4 md:col-span-12 flex justify-center py-6 hidden">
+            <div class="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          </div>
 
           <!-- Empty State -->
           <div class="col-span-4 md:col-span-12 flex flex-col items-center justify-center py-24 text-center" id="timeline-empty">
