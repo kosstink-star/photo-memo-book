@@ -1644,8 +1644,10 @@ function renderTimeline() {
     
     return `
       <section class="${colSpan} timeline-card ${isLarge ? 'is-large' : ''} ${selectedPhotos.has(photo.id) ? 'ring-4 ring-primary rounded-xl overflow-hidden' : ''} fade-in relative" data-id="${photo.id}">
-        ${isSelectionMode ? `<div class="absolute inset-0 bg-black/40 z-10 flex items-center justify-center transition-colors pointer-events-none">
-          ${selectedPhotos.has(photo.id) ? '<span class="material-symbols-outlined text-white text-4xl">check_circle</span>' : '<span class="material-symbols-outlined text-white/50 text-4xl">radio_button_unchecked</span>'}
+        ${isSelectionMode ? `<div class="absolute inset-0 ${selectedPhotos.has(photo.id) ? 'bg-black/40' : 'bg-black/10'} z-10 transition-colors pointer-events-none">
+          <div class="absolute top-2 left-2 flex items-center justify-center bg-black/20 rounded-full drop-shadow-md">
+            ${selectedPhotos.has(photo.id) ? '<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: \'FILL\' 1;">check_circle</span>' : '<span class="material-symbols-outlined text-white/70 text-3xl">radio_button_unchecked</span>'}
+          </div>
         </div>` : ''}
         <div class="timeline-card-photo">
           <img src="${photo.thumbnail_url || photo.thumbnailDataUrl}" loading="lazy" />
