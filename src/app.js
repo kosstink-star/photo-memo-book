@@ -843,6 +843,17 @@ function setupEventListeners() {
   homeUploadBtn?.addEventListener('click', () => { switchView('timeline'); fileInput.click(); });
 
   // Timeline Filters
+  
+  const timelineSortSelect = document.getElementById('timeline-sort-select');
+  if (timelineSortSelect) {
+    timelineSortSelect.addEventListener('change', (e) => {
+      currentTimelineSort = e.target.value;
+      timelinePage = 1;
+      hasMorePhotos = true;
+      renderTimeline();
+    });
+  }
+
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
