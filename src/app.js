@@ -697,17 +697,44 @@ function setupEventListeners() {
   
   if (photoModalLikeBtn2 && emojiPicker) {
     let hideTimeout;
-    photoModalLikeBtn2.addEventListener('mouseenter', () => {
+    let pressTimer;
+    
+    const showPicker = () => {
       clearTimeout(hideTimeout);
-      emojiPicker.classList.remove('hidden');
-    });
-    photoModalLikeBtn2.addEventListener('mouseleave', () => {
-      hideTimeout = setTimeout(() => emojiPicker.classList.add('hidden'), 500);
-    });
-    emojiPicker.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
-    emojiPicker.addEventListener('mouseleave', () => {
-      hideTimeout = setTimeout(() => emojiPicker.classList.add('hidden'), 500);
-    });
+      emojiPicker.classList.remove('opacity-0', 'invisible');
+      emojiPicker.classList.add('opacity-100', 'visible', '!opacity-100', '!visible');
+    };
+    
+    const hidePicker = () => {
+      hideTimeout = setTimeout(() => {
+        emojiPicker.classList.add('opacity-0', 'invisible');
+        emojiPicker.classList.remove('opacity-100', 'visible', '!opacity-100', '!visible');
+      }, 500);
+    };
+
+    photoModalLikeBtn2.addEventListener('mouseenter', showPicker);
+    photoModalLikeBtn2.addEventListener('mouseleave', hidePicker);
+    emojiPicker.addEventListener('mouseenter', showPicker);
+    emojiPicker.addEventListener('mouseleave', hidePicker);
+    
+    // Mobile long press
+    photoModalLikeBtn2.addEventListener('touchstart', (e) => {
+      pressTimer = setTimeout(() => {
+        showPicker();
+      }, 500); // 500ms long press
+    }, {passive: true});
+    
+    photoModalLikeBtn2.addEventListener('touchend', () => clearTimeout(pressTimer));
+    photoModalLikeBtn2.addEventListener('touchcancel', () => clearTimeout(pressTimer));
+    photoModalLikeBtn2.addEventListener('touchmove', () => clearTimeout(pressTimer));
+    
+    // Hide picker when tapping elsewhere on mobile
+    document.addEventListener('touchstart', (e) => {
+      if (!photoModalLikeBtn2.contains(e.target) && !emojiPicker.contains(e.target)) {
+        emojiPicker.classList.add('opacity-0', 'invisible');
+        emojiPicker.classList.remove('opacity-100', 'visible', '!opacity-100', '!visible');
+      }
+    }, {passive: true});
     
     emojiPicker.querySelectorAll('.reaction-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
