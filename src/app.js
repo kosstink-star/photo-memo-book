@@ -235,6 +235,8 @@ let currentTimelineFilter = 'all';
 let currentTimelineSort = 'desc';
 let currentTimelineLocation = '';
 let currentTimelineLimit = 20;
+let isSelectionMode = false;
+let selectedPhotos = new Set();
 
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
