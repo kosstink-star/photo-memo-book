@@ -169,7 +169,7 @@
     <div class="flex items-center gap-2">
       <span class="material-symbols-outlined text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">camera_roll</span>
       <h1 class="font-display-lg text-title-md tracking-tighter text-primary-fixed-dim">Memoirs</h1>
-      <span class="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full ml-1 font-mono" id="app-version">v1.5.1</span>
+      <span class="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full ml-1 font-mono" id="app-version">v1.5.3</span>
     </div>
     <div class="flex items-center gap-2">
       <!-- Family Members Avatars (compact) -->
@@ -791,8 +791,20 @@
         </div>
       </div>
 
-      <!-- Logout -->
-      <button class="w-full py-3 rounded-xl border border-error/30 text-error font-title-md text-sm hover:bg-error/10 transition-all active:scale-95 flex items-center justify-center gap-2" id="btn-logout">
+        <!-- Storage Usage -->
+        <div class="glass-surface rounded-xl p-4 mb-4 border border-white/5">
+          <h3 class="font-title-sm text-on-surface mb-2 flex items-center gap-2"><span class="material-symbols-outlined text-sm">cloud</span> 저장 용량</h3>
+          <div class="flex justify-between text-xs text-on-surface-variant mb-1">
+            <span id="storage-used-text">계산 중...</span>
+            <span>무제한 (가족 공유)</span>
+          </div>
+          <div class="w-full bg-surface-container-high rounded-full h-2 mb-1">
+            <div id="storage-progress-bar" class="bg-primary h-2 rounded-full" style="width: 0%"></div>
+          </div>
+        </div>
+  
+        <!-- Logout -->
+        <button class="w-full py-3 rounded-xl border border-error/30 text-error font-title-md text-sm hover:bg-error/10 transition-all active:scale-95 flex items-center justify-center gap-2" id="btn-logout">
         <span class="material-symbols-outlined text-lg">logout</span> 로그아웃
       </button>
 

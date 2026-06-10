@@ -1092,6 +1092,16 @@ function setupEventListeners() {
   // Settings
   document.getElementById('btn-settings').addEventListener('click', async () => {
     await updateSettingsMembers(); // refresh pending members
+    
+    // Refresh storage size
+    const totalUsedMB = (allPhotosCache.length * 2.0).toFixed(1);
+    const storageText = document.getElementById('storage-used-text');
+    if (storageText) storageText.textContent = `${totalUsedMB} MB 사용 중`;
+    let pct = (totalUsedMB / 10000) * 100;
+    if (pct < 1 && totalUsedMB > 0) pct = 1;
+    const storageBar = document.getElementById('storage-progress-bar');
+    if (storageBar) storageBar.style.width = `${pct}%`;
+
     settingsModal.classList.add('active');
   });
   settingsModalClose.addEventListener('click', () => settingsModal.classList.remove('active'));
@@ -1931,7 +1941,7 @@ function refreshMapMarkers() {
 
 
 window.goToSmartAlbum = function(address) {
-  const timelineTab = document.querySelector('.nav-link[data-target="view-timeline"]');
+  const timelineTab = document.querySelector('.nav-item[data-view="timeline"]');
   if (timelineTab) timelineTab.click();
   
   const filterBtn = document.querySelector('[data-filter="location"]');
