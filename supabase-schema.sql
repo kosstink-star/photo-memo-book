@@ -524,3 +524,30 @@ create policy "storage_photos_delete"
 
 -- Migration: Add reaction_type for emoji reactions (Phase 2)
 ALTER TABLE public.photo_likes ADD COLUMN reaction_type text DEFAULT 'like';
+
+-- ==============================================================================
+-- PHASE 4: NOTIFICATIONS
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    type TEXT NOT NULL, -- 'like', 'upload', 'anniversary'
+    content TEXT NOT NULL,
+    related_photo_id UUID REFERENCES public.photos(id) ON DELETE CASCADE,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own notifications" 
+    ON public.notifications FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert notifications" 
+    ON public.notifications FOR INSERT 
+    WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Users can update their own notifications" 
+    ON public.notifications FOR UPDATE 
+    USING (auth.uid() = user_id);

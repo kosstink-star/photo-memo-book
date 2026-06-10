@@ -693,6 +693,7 @@ function switchView(view) {
 // Event Listeners (Main App)
 // ──────────────────────────────────────
 function setupEventListeners() {
+    initNotifications();
 
   const photoModalLikeBtn2 = document.getElementById('photo-modal-like-btn');
   const emojiPicker = document.getElementById('emoji-picker');
@@ -763,6 +764,10 @@ function setupEventListeners() {
         try {
           await likePhoto(currentEditingPhoto.id, emoji);
           const likesCount = await getPhotoLikes(currentEditingPhoto.id);
+            // Phase 4: Create notification for the uploader
+            if (currentEditingPhoto.uploaded_by && currentEditingPhoto.uploaded_by !== currentUser?.id) {
+              storage.addNotification(currentEditingPhoto.uploaded_by, 'like', `누군가 회원님의 사진에 하트를 남겼습니다.`, currentEditingPhoto.id);
+            }
           countEl.textContent = likesCount;
           
           const cardHeart = document.querySelector(`.timeline-card[data-id="${currentEditingPhoto.id}"] .timeline-card-info button`);
@@ -1967,6 +1972,9 @@ function generateSmartAlbums() {
 
 function updateHomeView() {
   generateSmartAlbums();
+    checkMonthlyRecap();
+    checkAnniversary();
+    loadNotifications();
   homeTotalCount.textContent = allPhotosCache.length;
   homeStatsTotal.textContent = `총 ${allPhotosCache.length}개의 추억`;
   
@@ -2178,3 +2186,244 @@ if (document.readyState === 'loading') {
 } else {
   init();
 }
+
+
+// ==========================================================================
+// PHASE 4: Notifications & Recap
+// ==========================================================================
+
+let notificationsList = [];
+
+function initNotifications() {
+
+  const btnDownloadRecap = document.getElementById('btn-recap-download');
+  if (btnDownloadRecap) {
+    btnDownloadRecap.addEventListener('click', async () => {
+      const card = document.getElementById('recap-card');
+      const originalTransform = card.style.transform;
+      card.style.transform = 'none'; // reset scale for proper render
+      
+      try {
+        const canvas = await html2canvas(card, {
+          backgroundColor: '#1E1E1E', // Dark background to match theme
+          scale: 2, // High resolution
+          useCORS: true
+        });
+        
+        const link = document.createElement('a');
+        link.download = `Memoirs_Recap_${document.getElementById('recap-month-text').textContent}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+      } catch (err) {
+        console.error('Failed to generate image', err);
+        showToast('이미지 저장에 실패했습니다.');
+      } finally {
+        card.style.transform = originalTransform;
+      }
+    });
+  }
+
+  const btnNotifs = document.getElementById('btn-notifications');
+  const panel = document.getElementById('notification-panel');
+  const btnReadAll = document.getElementById('btn-read-all');
+  
+  if (btnNotifs && panel) {
+    btnNotifs.addEventListener('click', () => {
+      const isVisible = panel.classList.contains('opacity-100');
+      if (isVisible) {
+        panel.classList.remove('opacity-100', 'pointer-events-auto');
+        panel.classList.add('opacity-0', 'pointer-events-none', 'translate-y-[-10px]');
+      } else {
+        panel.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-[-10px]');
+        panel.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+        renderNotificationList();
+        // Mark as read in DB
+        if (currentUser) {
+          storage.markNotificationsAsRead(currentUser.id).then(() => {
+            document.getElementById('notification-badge').classList.add('hidden');
+          });
+        }
+      }
+    });
+  }
+  
+  if (btnReadAll) {
+    btnReadAll.addEventListener('click', () => {
+      notificationsList.forEach(n => n.is_read = true);
+      renderNotificationList();
+    });
+  }
+}
+
+async function loadNotifications() {
+  if (!currentUser) {
+    if (storage.isGuest) {
+      notificationsList = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
+    } else return;
+  } else {
+    notificationsList = await storage.getNotifications(currentUser.id);
+  }
+  
+  const unreadCount = notificationsList.filter(n => !n.is_read).length;
+  const badge = document.getElementById('notification-badge');
+  if (badge) {
+    if (unreadCount > 0) badge.classList.remove('hidden');
+    else badge.classList.add('hidden');
+  }
+}
+
+function renderNotificationList() {
+  const container = document.getElementById('notification-list');
+  if (!container) return;
+  
+  if (notificationsList.length === 0) {
+    container.innerHTML = '<div class="p-4 text-center text-on-surface-variant text-sm">알림이 없습니다.</div>';
+    return;
+  }
+  
+  container.innerHTML = notificationsList.map(n => {
+    let icon = 'notifications';
+    if (n.type === 'like') icon = 'favorite';
+    else if (n.type === 'upload') icon = 'add_photo_alternate';
+    else if (n.type === 'anniversary') icon = 'cake';
+    
+    return `
+      <div class="p-3 rounded-lg hover:bg-white/5 transition-colors flex items-start gap-3 ${!n.is_read ? 'bg-primary/5' : ''}">
+        <div class="w-8 h-8 rounded-full bg-primary/20 flex flex-shrink-0 items-center justify-center mt-1">
+          <span class="material-symbols-outlined text-primary text-sm">${icon}</span>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm text-on-surface leading-tight mb-1">${n.content}</p>
+          <span class="text-[10px] text-on-surface-variant/70">${new Date(n.created_at).toLocaleDateString()}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ---------------------------
+// Anniversary & Recap
+// ---------------------------
+
+function checkAnniversary() {
+  if (allPhotosCache.length === 0) return;
+  const today = new Date();
+  
+  // Find a photo from exactly 1 year ago (+/- 1 day)
+  const oneYearAgoPhoto = allPhotosCache.find(p => {
+    const d = new Date(p.date || p.created_at);
+    return d.getFullYear() === today.getFullYear() - 1 &&
+           d.getMonth() === today.getMonth() &&
+           Math.abs(d.getDate() - today.getDate()) <= 1;
+  });
+  
+  if (oneYearAgoPhoto) {
+    // Only show once per session or store in sessionStorage
+    if (sessionStorage.getItem('anniversary_shown')) return;
+    sessionStorage.setItem('anniversary_shown', 'true');
+    
+    const modal = document.getElementById('anniversary-modal');
+    if (modal) {
+      document.getElementById('anniversary-img').src = oneYearAgoPhoto.image_url || oneYearAgoPhoto.thumbnailDataUrl || '';
+      document.getElementById('anniversary-memo').textContent = oneYearAgoPhoto.memo || '소중한 추억입니다.';
+      document.getElementById('anniversary-date').textContent = new Date(oneYearAgoPhoto.date || oneYearAgoPhoto.created_at).toLocaleDateString();
+      
+      setTimeout(() => {
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        modal.classList.add('opacity-100', 'pointer-events-auto');
+        modal.querySelector('.glass-surface').classList.add('scale-100');
+      }, 1000);
+    }
+  }
+}
+
+function checkMonthlyRecap() {
+  const today = new Date();
+  // Show recap button if there are photos from last month
+  const lastMonth = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
+  const lastMonthYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+  
+  const lastMonthPhotos = allPhotosCache.filter(p => {
+    const d = new Date(p.date || p.created_at);
+    return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
+  });
+  
+  if (lastMonthPhotos.length > 0) {
+    // Sort by likes
+    lastMonthPhotos.sort((a, b) => {
+      const aLikes = a.photo_likes ? a.photo_likes[0]?.count || 0 : 0;
+      const bLikes = b.photo_likes ? b.photo_likes[0]?.count || 0 : 0;
+      return bLikes - aLikes;
+    });
+    
+    const topPhotos = lastMonthPhotos.slice(0, 4);
+    
+    // Create Recap button in home
+    const homeSection = document.getElementById('view-home');
+    if (homeSection && !document.getElementById('monthly-recap-banner')) {
+      const banner = document.createElement('div');
+      banner.id = 'monthly-recap-banner';
+      banner.className = 'col-span-4 md:col-span-12 mb-6 cursor-pointer transform hover:scale-[1.02] transition-transform active:scale-95';
+      banner.innerHTML = `
+        <div class="glass-surface glass-edge rounded-2xl p-6 relative overflow-hidden group">
+          <div class="relative z-10 flex justify-between items-center">
+            <div>
+              <h2 class="font-display-lg text-2xl text-primary mb-1">${lastMonth + 1}월 리캡이 도착했어요! 🎉</h2>
+              <p class="text-on-surface-variant text-sm">지난 한 달간 가장 빛났던 추억들을 확인해 보세요.</p>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center group-hover:bg-primary/40 transition-colors">
+              <span class="material-symbols-outlined text-primary text-2xl">auto_awesome</span>
+            </div>
+          </div>
+          <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none"></div>
+        </div>
+      `;
+      
+      banner.addEventListener('click', () => {
+        showRecapModal(lastMonth + 1, topPhotos);
+      });
+      
+      const uploadCard = homeSection.querySelector('.col-span-4.md\:col-span-12');
+      if (uploadCard) {
+        uploadCard.parentNode.insertBefore(banner, uploadCard.nextSibling);
+      }
+    }
+  }
+}
+
+function showRecapModal(month, topPhotos) {
+  const modal = document.getElementById('recap-modal');
+  if (!modal) return;
+  
+  document.getElementById('recap-month-text').textContent = `${month}월 베스트 샷`;
+  
+  let totalLikes = 0;
+  const grid = document.getElementById('recap-grid');
+  grid.innerHTML = topPhotos.map((p, idx) => {
+    const likes = p.photo_likes ? p.photo_likes[0]?.count || 0 : 0;
+    totalLikes += likes;
+    const colSpan = (topPhotos.length === 3 && idx === 0) ? 'col-span-2' : 'col-span-1';
+    return `
+      <div class="${colSpan} relative rounded-xl overflow-hidden aspect-square">
+        <img src="${p.image_url || p.thumbnailDataUrl}" class="absolute inset-0 w-full h-full object-cover" />
+        ${likes > 0 ? `<div class="absolute bottom-2 right-2 bg-black/60 px-2 py-1 rounded-full flex items-center gap-1">
+          <span class="material-symbols-outlined text-[12px] text-error" style="font-variation-settings: 'FILL' 1;">favorite</span>
+          <span class="text-xs text-white">${likes}</span>
+        </div>` : ''}
+      </div>
+    `;
+  }).join('');
+  
+  document.getElementById('recap-total-likes').textContent = totalLikes;
+  
+  modal.classList.remove('opacity-0', 'pointer-events-none');
+  modal.classList.add('opacity-100', 'pointer-events-auto');
+  setTimeout(() => {
+    document.getElementById('recap-card').classList.add('scale-100');
+  }, 50);
+}
+
+// Hook into init() and renderTimeline()
+const originalInitPhase4 = window.init || function(){};
+// We will call initNotifications in setupEventListeners
