@@ -1494,11 +1494,23 @@ function renderTimeline() {
 
   
   if (currentTimelineSort === 'asc') {
-    photos.sort((a, b) => new Date(a.date || a.created_at) - new Date(b.date || b.created_at));
+    photos.sort((a, b) => {
+      const timeA = a.date ? new Date(a.date).getTime() : (a.createdAt || 0);
+      const timeB = b.date ? new Date(b.date).getTime() : (b.createdAt || 0);
+      return timeA - timeB;
+    });
   } else if (currentTimelineSort === 'likes') {
-    photos.sort((a, b) => (b.photo_likes?.[0]?.count || 0) - (a.photo_likes?.[0]?.count || 0));
+    photos.sort((a, b) => {
+      const likesA = a.likesCount !== undefined ? a.likesCount : (a.photo_likes?.[0]?.count || 0);
+      const likesB = b.likesCount !== undefined ? b.likesCount : (b.photo_likes?.[0]?.count || 0);
+      return likesB - likesA;
+    });
   } else {
-    photos.sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at));
+    photos.sort((a, b) => {
+      const timeA = a.date ? new Date(a.date).getTime() : (a.createdAt || 0);
+      const timeB = b.date ? new Date(b.date).getTime() : (b.createdAt || 0);
+      return timeB - timeA;
+    });
   }
 
   const now = new Date();
