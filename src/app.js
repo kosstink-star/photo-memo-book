@@ -848,8 +848,7 @@ function setupEventListeners() {
   if (timelineSortSelect) {
     timelineSortSelect.addEventListener('change', (e) => {
       currentTimelineSort = e.target.value;
-      timelinePage = 1;
-      hasMorePhotos = true;
+      currentTimelineLimit = 20;
       renderTimeline();
     });
   }
