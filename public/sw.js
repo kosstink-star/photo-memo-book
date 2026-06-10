@@ -1,4 +1,4 @@
-const CACHE_NAME = 'photo-memo-cache-v1';
+const CACHE_NAME = 'photo-memo-cache-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -14,6 +14,6 @@ self.addEventListener('install', (e) => {
 self.addEventListener('fetch', (e) => {
   // 캐시 우선, 없으면 네트워크 폴백 (네트워크 요청 차단 방지용 뼈대)
   e.respondWith(
-    caches.match(e.request).then((response) => response || fetch(e.request))
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
