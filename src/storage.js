@@ -283,10 +283,10 @@ export async function unlikePhoto(photoId) {
 export async function getPhotoLikes(photoId) {
   const { data, error } = await supabase
     .from('photo_likes')
-    .select('*, user:user_id(nickname, avatar_url)')
+    .select('*')
     .eq('photo_id', photoId);
   if (error) throw error;
-  return data;
+  return data ? data.length : 0;
 }
 
 export async function hasUserLiked(photoId) {

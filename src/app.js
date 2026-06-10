@@ -1608,7 +1608,7 @@ async function openPhotoModal(photo) {
       let likesCount = photo.photo_likes?.[0]?.count;
       if (likesCount === undefined) {
         const likes = await getPhotoLikes(photo.id);
-        likesCount = likes ? likes.length : 0;
+        likesCount = typeof likes === 'number' ? likes : (likes ? likes.length : 0);
       }
       const countEl = document.getElementById('photo-modal-like-count');
       if (countEl) countEl.textContent = likesCount;
