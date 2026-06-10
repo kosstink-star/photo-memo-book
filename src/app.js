@@ -736,7 +736,7 @@ function setupEventListeners() {
       }
     }, {passive: true});
     
-    emojiPicker.querySelectorAll('.reaction-btn').forEach(btn => {
+    emojiPicker.querySelectorAll('.emoji-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if(!currentEditingPhoto) return;
