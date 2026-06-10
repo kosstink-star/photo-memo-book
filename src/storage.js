@@ -247,11 +247,26 @@ export async function updatePhoto(id, updates) {
 export async function likePhoto(photoId, reactionType = 'like') {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-  // Upsert to handle changing reactions
-  const { error } = await supabase
+  
+  const { data: existing } = await supabase
     .from('photo_likes')
-    .upsert({ photo_id: photoId, user_id: user.id, reaction_type: reactionType }, { onConflict: 'photo_id,user_id' });
-  if (error) throw error;
+    .select('id')
+    .eq('photo_id', photoId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (existing) {
+    const { error } = await supabase
+      .from('photo_likes')
+      .update({ reaction_type: reactionType })
+      .eq('id', existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('photo_likes')
+      .insert({ photo_id: photoId, user_id: user.id, reaction_type: reactionType });
+    if (error) throw error;
+  }
 }
 
 export async function unlikePhoto(photoId) {
