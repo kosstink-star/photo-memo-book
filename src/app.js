@@ -1702,7 +1702,17 @@ function renderTimeline() {
 
   timelineGrid.querySelectorAll('.timeline-card').forEach(card => {
     card.addEventListener('click', (e) => {
+      // Prevent triggering if clicked on the favorite button or actions
+      if (e.target.closest('.tc-action-btn') || e.target.closest('.favorite-btn-card')) return;
+
       const id = card.dataset.id;
+      if (isSelectionMode) {
+        if (selectedPhotos.has(id)) selectedPhotos.delete(id);
+        else selectedPhotos.add(id);
+        renderTimeline();
+        updateSelectionActionBar();
+        return;
+      }
       const photo = allPhotosCache.find(p => p.id === id);
       if (photo) openPhotoModal(photo);
     });
