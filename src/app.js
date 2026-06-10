@@ -1932,7 +1932,7 @@ function generateSmartAlbums() {
 
   // 3. Find albums with >= 3 photos
   const smartAlbums = Object.values(clusters)
-    .filter(c => c.photos.length >= 3)
+    .filter(c => c.photos.length >= 1)
     .sort((a, b) => b.photos.length - a.photos.length)
     .slice(0, 5); // top 5 suggestions
 
