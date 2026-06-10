@@ -1264,9 +1264,9 @@ function setupEventListeners() {
 
     try {
       if (isLiked) {
-        await unlikePhoto(currentEditingPhoto.id, currentUser.id);
+        await unlikePhoto(currentEditingPhoto.id);
       } else {
-        await likePhoto(currentEditingPhoto.id, currentUser.id);
+        await likePhoto(currentEditingPhoto.id);
       }
       const likesCount = await getPhotoLikes(currentEditingPhoto.id);
       countEl.textContent = likesCount;
