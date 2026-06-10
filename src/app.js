@@ -1493,24 +1493,23 @@ function renderTimeline() {
   }
 
   
+  const getValidTime = (p) => {
+    let t = p.date ? new Date(p.date).getTime() : 0;
+    if (!t || isNaN(t)) t = p.createdAt || 0;
+    return t;
+  };
+
+  const getLikes = (p) => {
+    let l = p.likesCount !== undefined ? p.likesCount : (p.photo_likes && p.photo_likes[0] ? p.photo_likes[0].count : 0);
+    return l || 0;
+  };
+
   if (currentTimelineSort === 'asc') {
-    photos.sort((a, b) => {
-      const timeA = a.date ? new Date(a.date).getTime() : (a.createdAt || 0);
-      const timeB = b.date ? new Date(b.date).getTime() : (b.createdAt || 0);
-      return timeA - timeB;
-    });
+    photos.sort((a, b) => getValidTime(a) - getValidTime(b));
   } else if (currentTimelineSort === 'likes') {
-    photos.sort((a, b) => {
-      const likesA = a.likesCount !== undefined ? a.likesCount : (a.photo_likes?.[0]?.count || 0);
-      const likesB = b.likesCount !== undefined ? b.likesCount : (b.photo_likes?.[0]?.count || 0);
-      return likesB - likesA;
-    });
+    photos.sort((a, b) => getLikes(b) - getLikes(a));
   } else {
-    photos.sort((a, b) => {
-      const timeA = a.date ? new Date(a.date).getTime() : (a.createdAt || 0);
-      const timeB = b.date ? new Date(b.date).getTime() : (b.createdAt || 0);
-      return timeB - timeA;
-    });
+    photos.sort((a, b) => getValidTime(b) - getValidTime(a));
   }
 
   const now = new Date();
