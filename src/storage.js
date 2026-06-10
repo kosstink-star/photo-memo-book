@@ -186,16 +186,18 @@ export async function deletePhoto(id, familyId) {
   // Get uploader ID to find the correct storage path
   const { data: photo } = await supabase.from('photos').select('uploaded_by').eq('id', id).single();
   
+  // First delete the DB row. If this fails (e.g., FK constraint), storage won't be deleted.
+  const { data, error } = await supabase.from('photos').delete().eq('id', id).select();
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('사진을 삭제할 권한이 없거나 이미 삭제되었습니다.');
+  
   if (photo) {
-    // Delete storage files
+    // Then delete storage files
     await supabase.storage.from('photos').remove([
       `${photo.uploaded_by}/${id}_full.jpg`,
       `${photo.uploaded_by}/${id}_thumb.jpg`,
     ]);
   }
-  
-  const { error } = await supabase.from('photos').delete().eq('id', id);
-  if (error) throw error;
 }
 
 // Get photo count for a family
