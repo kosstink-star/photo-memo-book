@@ -367,6 +367,19 @@ function showMainApp() {
     settingsFamilyName.textContent = currentFamily.name;
     settingsInviteCode.textContent = currentFamily.invite_code;
     settingsEmail.textContent = currentUser.email;
+
+    // Storage Usage Approximation (1.8MB per photo + 0.2MB for thumbnail) = 2.0MB
+    const assumedSizeMB = 2.0;
+    const totalUsedMB = (allPhotosCache.length * assumedSizeMB).toFixed(1);
+    const storageText = document.getElementById('storage-used-text');
+    if (storageText) storageText.textContent = `${totalUsedMB} MB 사용 중`;
+    
+    // Progress bar (fake max limit of 10GB for visuals, or just 1% per 100MB)
+    const fakeLimitMB = 10000;
+    let pct = (totalUsedMB / fakeLimitMB) * 100;
+    if (pct < 1 && totalUsedMB > 0) pct = 1;
+    const storageBar = document.getElementById('storage-progress-bar');
+    if (storageBar) storageBar.style.width = `${pct}%`;
     settingsNickname.textContent = currentUser.user_metadata?.nickname || '사용자';
   }
 }
@@ -1917,6 +1930,22 @@ function refreshMapMarkers() {
 }
 
 
+window.goToSmartAlbum = function(address) {
+  const timelineTab = document.querySelector('.nav-link[data-target="view-timeline"]');
+  if (timelineTab) timelineTab.click();
+  
+  const filterBtn = document.querySelector('[data-filter="location"]');
+  if (filterBtn) filterBtn.click();
+  
+  setTimeout(() => {
+    const locSelect = document.getElementById('location-filter-select');
+    if (locSelect) {
+      locSelect.value = address;
+      locSelect.dispatchEvent(new Event('change'));
+    }
+  }, 100);
+};
+
 function generateSmartAlbums() {
   const section = document.getElementById('home-smart-albums-section');
   const container = document.getElementById('home-smart-albums-container');
@@ -1952,7 +1981,7 @@ function generateSmartAlbums() {
   container.innerHTML = smartAlbums.map(album => {
     const cover = album.photos[0];
     return `
-      <div class="snap-start shrink-0 w-64 glass-surface rounded-xl overflow-hidden cursor-pointer group" onclick="switchView('timeline'); document.querySelector('[data-filter=location]').click(); document.getElementById('location-filter-select').value='${album.address}'; document.getElementById('location-filter-select').dispatchEvent(new Event('change'));">
+      <div class="snap-start shrink-0 w-64 glass-surface rounded-xl overflow-hidden cursor-pointer group" onclick="window.goToSmartAlbum('${album.address}')">
         <div class="h-32 w-full relative overflow-hidden">
           <img src="${cover.thumbnail_url || cover.thumbnailDataUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
           <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
