@@ -1897,7 +1897,62 @@ function refreshMapMarkers() {
   if(mapInitialized) renderMarkers(allPhotosCache);
 }
 
+
+function generateSmartAlbums() {
+  const section = document.getElementById('home-smart-albums-section');
+  const container = document.getElementById('home-smart-albums-container');
+  if (!section || !container) return;
+
+  // 1. Filter valid photos
+  const validPhotos = allPhotosCache.filter(p => p.address && p.date);
+  
+  // 2. Group by Address + Month
+  const clusters = {};
+  validPhotos.forEach(p => {
+    const addr = p.address;
+    const dateObj = new Date(p.date);
+    const monthKey = `${dateObj.getFullYear()}년 ${dateObj.getMonth() + 1}월`;
+    const key = `${addr}||${monthKey}`;
+    
+    if (!clusters[key]) clusters[key] = { address: addr, month: monthKey, photos: [] };
+    clusters[key].photos.push(p);
+  });
+
+  // 3. Find albums with >= 3 photos
+  const smartAlbums = Object.values(clusters)
+    .filter(c => c.photos.length >= 3)
+    .sort((a, b) => b.photos.length - a.photos.length)
+    .slice(0, 5); // top 5 suggestions
+
+  if (smartAlbums.length === 0) {
+    section.classList.add('hidden');
+    return;
+  }
+
+  section.classList.remove('hidden');
+  container.innerHTML = smartAlbums.map(album => {
+    const cover = album.photos[0];
+    return `
+      <div class="snap-start shrink-0 w-64 glass-surface rounded-xl overflow-hidden cursor-pointer group" onclick="switchView('timeline'); document.querySelector('[data-filter=location]').click(); document.getElementById('location-filter-select').value='${album.address}'; document.getElementById('location-filter-select').dispatchEvent(new Event('change'));">
+        <div class="h-32 w-full relative overflow-hidden">
+          <img src="${cover.thumbnail_url || cover.thumbnailDataUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div class="absolute bottom-3 left-3 text-white">
+            <h4 class="font-title-md text-title-md">${album.address}</h4>
+            <p class="text-[11px] text-white/80 flex items-center gap-1"><span class="material-symbols-outlined text-[11px]">calendar_month</span> ${album.month}</p>
+          </div>
+        </div>
+        <div class="p-3 flex justify-between items-center bg-surface/50">
+          <span class="text-xs text-on-surface-variant">${album.photos.length}장의 추억</span>
+          <button class="text-xs text-primary font-medium bg-primary/10 px-2 py-1 rounded-full">모두 보기</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 function updateHomeView() {
+  generateSmartAlbums();
   homeTotalCount.textContent = allPhotosCache.length;
   homeStatsTotal.textContent = `총 ${allPhotosCache.length}개의 추억`;
   

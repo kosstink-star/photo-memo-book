@@ -168,7 +168,7 @@
     <div class="flex items-center gap-2">
       <span class="material-symbols-outlined text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">camera_roll</span>
       <h1 class="font-display-lg text-title-md tracking-tighter text-primary-fixed-dim">Memoirs</h1>
-      <span class="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full ml-1 font-mono">v1.4.1</span>
+      <span class="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full ml-1 font-mono">v1.4.2</span>
     </div>
     <div class="flex items-center gap-2">
       <!-- Family Members Avatars (compact) -->
@@ -200,7 +200,18 @@
     <div class="view-container active" id="view-home">
       <div class="grid grid-cols-4 md:grid-cols-12 gap-grid-gutter">
 
-        <!-- Hero Welcome Card -->
+        <!-- Smart Albums Section -->
+          <section class="col-span-4 md:col-span-12 glass-surface rounded-lg p-card-padding hidden" id="home-smart-albums-section">
+            <div class="flex items-center gap-2 mb-4">
+              <span class="material-symbols-outlined text-primary text-xl">auto_awesome</span>
+              <h3 class="font-title-md text-title-md text-primary">스마트 추천 앨범</h3>
+            </div>
+            <div class="flex overflow-x-auto gap-4 pb-2 snap-x" id="home-smart-albums-container">
+              <!-- Smart albums will be injected here -->
+            </div>
+          </section>
+          
+          <!-- Hero Welcome Card -->
         <section class="col-span-4 md:col-span-8 glass-surface rounded-lg p-card-padding flex flex-col justify-between relative overflow-hidden cyan-glow">
           <div class="relative z-10">
             <h2 class="font-display-lg text-display-lg text-primary mb-2 hidden md:block">우리 가족의 추억</h2>
@@ -778,7 +789,7 @@
 
       <!-- Version Info -->
       <div class="text-center mt-6 pt-4 border-t border-white/5">
-        <p class="text-on-surface-variant/40 text-xs">Memoirs v1.4.1</p>
+        <p class="text-on-surface-variant/40 text-xs">Memoirs v1.4.2</p>
         <p class="text-on-surface-variant/30 text-xs mt-1">© 2025 가족 추억 공유 앱</p>
       </div>
     </div>
