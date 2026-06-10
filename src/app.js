@@ -1278,7 +1278,7 @@ function setupEventListeners() {
       console.error(e);
       icon.classList.toggle('like-active', isLiked);
       countEl.textContent = isLiked ? currentCount + 1 : currentCount - 1;
-      showToast('좋아요 처리에 실패했습니다');
+      showToast('오류: ' + (e?.message || JSON.stringify(e) || '좋아요 실패'));
     }
   });
 }
