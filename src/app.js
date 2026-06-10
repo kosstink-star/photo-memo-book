@@ -9,7 +9,7 @@ import { supabase } from './supabase.js';
 import { signUp, signIn, signOut, getCurrentUser, onAuthStateChange, updateProfile } from './auth.js';
 import { createFamily, joinFamily, getMyFamily, getFamilyMembers, getFamilyInviteCode, getPendingMembers, approveMember, rejectMember } from './family.js';
 import { createAlbum, getAlbums, getAlbumPhotos, addPhotoToAlbum, removePhotoFromAlbum, deleteAlbum } from './albums.js';
-import { savePhoto, getAllPhotos, deletePhoto, updatePhoto, likePhoto, unlikePhoto, hasUserLiked } from './storage.js';
+import { savePhoto, getAllPhotos, deletePhoto, updatePhoto, likePhoto, unlikePhoto, hasUserLiked, getPhotoLikes } from './storage.js';
 
 // ──────────────────────────────────────
 // DOM References
