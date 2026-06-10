@@ -828,10 +828,19 @@
 
       <!-- Like & Comment Quick Bar -->
       <div class="bg-surface px-6 py-3 border-b border-white/5 flex items-center gap-6">
-        <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-error transition-colors group" id="photo-modal-like-btn">
+        <div class="relative group/like">
+<button class="flex items-center gap-1.5 text-on-surface-variant hover:text-error transition-colors group" id="photo-modal-like-btn">
           <span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform" id="photo-modal-like-icon">favorite_border</span>
           <span class="text-body-sm font-medium" id="photo-modal-like-count">0</span>
         </button>
+<!-- Emoji Picker (shows on hover/long-press) -->
+<div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-surface-container-high rounded-full px-2 py-1.5 flex gap-2 shadow-lg opacity-0 invisible group-hover/like:opacity-100 group-hover/like:visible transition-all duration-200 z-50" id="emoji-picker">
+  <button class="emoji-btn hover:scale-125 transition-transform text-lg" data-emoji="❤️">❤️</button>
+  <button class="emoji-btn hover:scale-125 transition-transform text-lg" data-emoji="😂">😂</button>
+  <button class="emoji-btn hover:scale-125 transition-transform text-lg" data-emoji="🎉">🎉</button>
+  <button class="emoji-btn hover:scale-125 transition-transform text-lg" data-emoji="🥰">🥰</button>
+</div>
+</div>
 
         <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-secondary transition-colors ml-auto" id="photo-modal-add-to-album" title="앨범에 추가">
           <span class="material-symbols-outlined text-xl">library_add</span>
