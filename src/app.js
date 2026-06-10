@@ -844,6 +844,74 @@ function setupEventListeners() {
 
   // Timeline Filters
   
+  
+  const timelineSelectModeBtn = document.getElementById('timeline-select-mode-btn');
+  if (timelineSelectModeBtn) {
+    timelineSelectModeBtn.addEventListener('click', () => {
+      isSelectionMode = !isSelectionMode;
+      if (!isSelectionMode) {
+        selectedPhotos.clear();
+        timelineSelectModeBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> 선택 모드';
+        timelineSelectModeBtn.classList.remove('bg-primary', 'text-on-primary');
+        timelineSelectModeBtn.classList.add('bg-primary/10', 'text-primary');
+      } else {
+        timelineSelectModeBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">cancel</span> 취소';
+        timelineSelectModeBtn.classList.add('bg-primary', 'text-on-primary');
+        timelineSelectModeBtn.classList.remove('bg-primary/10', 'text-primary');
+      }
+      renderTimeline();
+      updateSelectionActionBar();
+    });
+  }
+
+  const selectionCancelBtn = document.getElementById('selection-cancel-btn');
+  if (selectionCancelBtn) {
+    selectionCancelBtn.addEventListener('click', () => {
+      isSelectionMode = false;
+      selectedPhotos.clear();
+      timelineSelectModeBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> 선택 모드';
+      timelineSelectModeBtn.classList.remove('bg-primary', 'text-on-primary');
+      timelineSelectModeBtn.classList.add('bg-primary/10', 'text-primary');
+      renderTimeline();
+      updateSelectionActionBar();
+    });
+  }
+
+  const selectionDeleteBtn = document.getElementById('selection-delete-btn');
+  if (selectionDeleteBtn) {
+    selectionDeleteBtn.addEventListener('click', async () => {
+      if (selectedPhotos.size === 0) return;
+      if (confirm(`선택한 사진 ${selectedPhotos.size}장을 삭제하시겠습니까?`)) {
+        try {
+          showToast('삭제 중...');
+          await storage.deletePhotos(Array.from(selectedPhotos));
+          allPhotosCache = allPhotosCache.filter(p => !selectedPhotos.has(p.id));
+          selectedPhotos.clear();
+          isSelectionMode = false;
+          timelineSelectModeBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span> 선택 모드';
+          timelineSelectModeBtn.classList.remove('bg-primary', 'text-on-primary');
+          timelineSelectModeBtn.classList.add('bg-primary/10', 'text-primary');
+          renderTimeline();
+          updateSelectionActionBar();
+          showToast('삭제되었습니다.');
+        } catch(e) {
+          console.error(e);
+          showToast('삭제 실패');
+        }
+      }
+    });
+  }
+
+  const selectionAlbumBtn = document.getElementById('selection-album-btn');
+  if (selectionAlbumBtn) {
+    selectionAlbumBtn.addEventListener('click', () => {
+      // For now, simply toast
+      if (selectedPhotos.size === 0) return;
+      showToast('앨범 추가 기능은 곧 지원될 예정입니다!');
+      // TODO: Open album selection sheet
+    });
+  }
+
   const timelineSortSelect = document.getElementById('timeline-sort-select');
   if (timelineSortSelect) {
     timelineSortSelect.addEventListener('change', (e) => {
@@ -1483,6 +1551,32 @@ function populateLocationFilter() {
 }
 
 // ──────────────────────────────────────
+
+function updateSelectionActionBar() {
+  const bar = document.getElementById('selection-action-bar');
+  const countSpan = document.getElementById('selection-count');
+  const deleteBtn = document.getElementById('selection-delete-btn');
+  const albumBtn = document.getElementById('selection-album-btn');
+  if (!bar || !countSpan) return;
+
+  if (isSelectionMode) {
+    bar.classList.remove('translate-y-full', 'hidden');
+    countSpan.textContent = selectedPhotos.size;
+    if (selectedPhotos.size > 0) {
+      deleteBtn.classList.remove('opacity-50', 'pointer-events-none');
+      albumBtn.classList.remove('opacity-50', 'pointer-events-none');
+    } else {
+      deleteBtn.classList.add('opacity-50', 'pointer-events-none');
+      albumBtn.classList.add('opacity-50', 'pointer-events-none');
+    }
+  } else {
+    bar.classList.add('translate-y-full');
+    setTimeout(() => {
+      if(!isSelectionMode) bar.classList.add('hidden');
+    }, 300);
+  }
+}
+
 function renderTimeline() {
   let photos = [...allPhotosCache];
 
@@ -1547,7 +1641,10 @@ function renderTimeline() {
     const uploaderProfile = familyMembers.find(m => m.user_id === photo.uploaded_by)?.profiles || familyMembers[0]?.profiles;
     
     return `
-      <section class="${colSpan} timeline-card ${isLarge ? 'is-large' : ''} fade-in" data-id="${photo.id}">
+      <section class="${colSpan} timeline-card ${isLarge ? 'is-large' : ''} ${selectedPhotos.has(photo.id) ? 'ring-4 ring-primary rounded-xl overflow-hidden' : ''} fade-in relative" data-id="${photo.id}">
+        ${isSelectionMode ? `<div class="absolute inset-0 bg-black/40 z-10 flex items-center justify-center transition-colors pointer-events-none">
+          ${selectedPhotos.has(photo.id) ? '<span class="material-symbols-outlined text-white text-4xl">check_circle</span>' : '<span class="material-symbols-outlined text-white/50 text-4xl">radio_button_unchecked</span>'}
+        </div>` : ''}
         <div class="timeline-card-photo">
           <img src="${photo.thumbnail_url || photo.thumbnailDataUrl}" loading="lazy" />
           <button class="favorite-btn-card ${photo.favorite ? 'is-fav' : ''}" data-fav-id="${photo.id}">

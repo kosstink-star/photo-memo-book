@@ -182,6 +182,27 @@ export async function getPhoto(id) {
 }
 
 // Delete photo (removes storage files too)
+
+export async function deletePhotos(ids) {
+  if (!ids || ids.length === 0) return;
+  
+  // First delete DB rows to satisfy FK constraints, returning uploaded_by for storage
+  const { data, error } = await supabase.from('photos').delete().in('id', ids).select('id, uploaded_by');
+  if (error) throw error;
+  
+  if (data && data.length > 0) {
+    const storagePaths = [];
+    data.forEach(p => {
+      storagePaths.push(`${p.uploaded_by}/${p.id}_full.jpg`);
+      storagePaths.push(`${p.uploaded_by}/${p.id}_thumb.jpg`);
+      // Fallback for WebP if it was used
+      storagePaths.push(`${p.uploaded_by}/${p.id}_full.webp`);
+      storagePaths.push(`${p.uploaded_by}/${p.id}_thumb.webp`);
+    });
+    await supabase.storage.from('photos').remove(storagePaths);
+  }
+}
+
 export async function deletePhoto(id, familyId) {
   // Get uploader ID to find the correct storage path
   const { data: photo } = await supabase.from('photos').select('uploaded_by').eq('id', id).single();
