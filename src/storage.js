@@ -356,70 +356,52 @@ export async function deleteComment(commentId) {
 export async function updateComment(commentId, newContent) {
   const { error } = await supabase.from('photo_comments').update({ content: newContent }).eq('id', commentId);
   if (error) throw error;
-
-  // ==========================================================================
-  // Notifications (Phase 4)
-  // ==========================================================================
-
-  async getNotifications(userId) {
-    if (this.isGuest) return []; // Fallback for guest mode
-    try {
-      const { data, error } = await this.client
-        .from('notifications')
-        .select('*, photos(thumbnail_url)')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(30);
-      if (error && error.code === '42P01') {
-        // Table doesn't exist yet, return empty
-        console.warn('Notifications table not found. Returning empty array.');
-        return [];
-      }
-      if (error) throw error;
-      return data || [];
-    } catch (e) {
-      console.error('Error fetching notifications:', e);
-      return [];
-    }
-  }
-
-  async addNotification(userId, type, content, relatedPhotoId = null) {
-    if (this.isGuest) {
-      // Mock for guest
-      let notifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
-      notifs.unshift({ id: Date.now().toString(), user_id: userId, type, content, related_photo_id: relatedPhotoId, is_read: false, created_at: new Date().toISOString() });
-      localStorage.setItem('mock_notifications', JSON.stringify(notifs));
-      return;
-    }
-    try {
-      const { error } = await this.client
-        .from('notifications')
-        .insert([{ user_id: userId, type, content, related_photo_id: relatedPhotoId }]);
-      // Ignore 42P01 (relation does not exist) silently if users haven't run the schema update
-      if (error && error.code !== '42P01') throw error;
-    } catch (e) {
-      console.error('Error adding notification:', e);
-    }
-  }
-
-  async markNotificationsAsRead(userId) {
-    if (this.isGuest) {
-      let notifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
-      notifs = notifs.map(n => ({...n, is_read: true}));
-      localStorage.setItem('mock_notifications', JSON.stringify(notifs));
-      return;
-    }
-    try {
-      const { error } = await this.client
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', userId)
-        .eq('is_read', false);
-      if (error && error.code !== '42P01') throw error;
-    } catch (e) {
-      console.error('Error marking notifications as read:', e);
-    }
-  }
-
 }
 
+// ==========================================================================
+// Notifications (Phase 4)
+// ==========================================================================
+
+export async function getNotifications(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*, photos(thumbnail_url)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (error && error.code === '42P01') {
+      console.warn('Notifications table not found. Returning empty array.');
+      return [];
+    }
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error('Error fetching notifications:', e);
+    return [];
+  }
+}
+
+export async function addNotification(userId, type, content, relatedPhotoId = null) {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .insert([{ user_id: userId, type, content, related_photo_id: relatedPhotoId }]);
+    if (error && error.code !== '42P01') throw error;
+  } catch (e) {
+    console.error('Error adding notification:', e);
+  }
+}
+
+export async function markNotificationsAsRead(userId) {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+    if (error && error.code !== '42P01') throw error;
+  } catch (e) {
+    console.error('Error marking notifications as read:', e);
+  }
+}
