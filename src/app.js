@@ -2384,7 +2384,7 @@ function checkMonthlyRecap() {
         showRecapModal(lastMonth + 1, topPhotos);
       });
       
-      const uploadCard = homeSection.querySelector('.col-span-4.md\:col-span-12');
+      const uploadCard = homeSection.querySelector('.col-span-4.md\\:col-span-12');
       if (uploadCard) {
         uploadCard.parentNode.insertBefore(banner, uploadCard.nextSibling);
       }
