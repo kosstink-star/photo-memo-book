@@ -217,6 +217,10 @@ let currentUser = null;
 let currentFamily = null;
 let familyMembers = [];
 let allPhotosCache = [];
+let currentTimelinePhotos = [];
+let currentRenderIndex = 0;
+const RENDER_BATCH_SIZE = 50;
+let timelineObserver = null;
 
 let currentView = 'home';
 let currentExifData = null;

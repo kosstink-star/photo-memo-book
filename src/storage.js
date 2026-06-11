@@ -67,10 +67,11 @@ export async function savePhoto(photoData, familyId) {
 
   let imageUrl = photoData.image_url;
   let thumbnailUrl = photoData.thumbnail_url;
+  const usedFamilyId = familyId || photoData.family_id;
 
   // Upload to storage if we have new files
   if (imageFile) {
-    const imagePath = `${user.id}/${photoId}_full.jpg`;
+    const imagePath = `${usedFamilyId}/${photoId}_full.jpg`;
     console.log('[savePhoto] Step 3a: Uploading image to:', imagePath);
     const { error: imgErr } = await supabase.storage
       .from('photos')
@@ -85,7 +86,7 @@ export async function savePhoto(photoData, familyId) {
   }
 
   if (thumbFile) {
-    const thumbPath = `${user.id}/${photoId}_thumb.jpg`;
+    const thumbPath = `${usedFamilyId}/${photoId}_thumb.jpg`;
     console.log('[savePhoto] Step 3b: Uploading thumb to:', thumbPath);
     const { error: thumbErr } = await supabase.storage
       .from('photos')
@@ -101,8 +102,6 @@ export async function savePhoto(photoData, familyId) {
 
   // Extract hashtags from memo
   const hashtags = (photoData.memo || '').match(/#[A-Za-z0-9가-힣_]+/g) || [];
-
-  const usedFamilyId = familyId || photoData.family_id;
 
   // Upsert photo metadata
   const record = {
@@ -186,37 +185,37 @@ export async function getPhoto(id) {
 export async function deletePhotos(ids) {
   if (!ids || ids.length === 0) return;
   
-  // First delete DB rows to satisfy FK constraints, returning uploaded_by for storage
-  const { data, error } = await supabase.from('photos').delete().in('id', ids).select('id, uploaded_by');
+  // First delete DB rows to satisfy FK constraints, returning family_id for storage
+  const { data, error } = await supabase.from('photos').delete().in('id', ids).select('id, family_id');
   if (error) throw error;
   
   if (data && data.length > 0) {
     const storagePaths = [];
     data.forEach(p => {
-      storagePaths.push(`${p.uploaded_by}/${p.id}_full.jpg`);
-      storagePaths.push(`${p.uploaded_by}/${p.id}_thumb.jpg`);
+      storagePaths.push(`${p.family_id}/${p.id}_full.jpg`);
+      storagePaths.push(`${p.family_id}/${p.id}_thumb.jpg`);
       // Fallback for WebP if it was used
-      storagePaths.push(`${p.uploaded_by}/${p.id}_full.webp`);
-      storagePaths.push(`${p.uploaded_by}/${p.id}_thumb.webp`);
+      storagePaths.push(`${p.family_id}/${p.id}_full.webp`);
+      storagePaths.push(`${p.family_id}/${p.id}_thumb.webp`);
     });
     await supabase.storage.from('photos').remove(storagePaths);
   }
 }
 
-export async function deletePhoto(id, familyId) {
-  // Get uploader ID to find the correct storage path
-  const { data: photo } = await supabase.from('photos').select('uploaded_by').eq('id', id).single();
+export async function deletePhoto(id) {
+  // Get family_id to find the correct storage path
+  const { data: photo } = await supabase.from('photos').select('family_id').eq('id', id).single();
   
   // First delete the DB row. If this fails (e.g., FK constraint), storage won't be deleted.
   const { data, error } = await supabase.from('photos').delete().eq('id', id).select();
   if (error) throw error;
-  if (!data || data.length === 0) throw new Error('사진을 삭제할 권한이 없거나 이미 삭제되었습니다.');
+  if (!data || data.length === 0) throw new Error('사진이 없거나 권한이 없어 제거할 수 없습니다.');
   
   if (photo) {
     // Then delete storage files
     await supabase.storage.from('photos').remove([
-      `${photo.uploaded_by}/${id}_full.jpg`,
-      `${photo.uploaded_by}/${id}_thumb.jpg`,
+      `${photo.family_id}/${id}_full.jpg`,
+      `${photo.family_id}/${id}_thumb.jpg`,
     ]);
   }
 }

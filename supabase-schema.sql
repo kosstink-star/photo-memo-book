@@ -192,11 +192,18 @@ create trigger on_auth_user_created
 -- --------------------
 alter table public.profiles enable row level security;
 
--- Anyone authenticated can read all profiles
+-- Anyone authenticated can read profiles of users in their families
 create policy "profiles_select"
   on public.profiles for select
   to authenticated
-  using (true);
+  using (
+    id = auth.uid() OR
+    exists (
+      select 1 from public.family_members fm1
+      join public.family_members fm2 on fm1.family_id = fm2.family_id
+      where fm1.user_id = auth.uid() and fm2.user_id = profiles.id
+    )
+  );
 
 -- Users can insert their own profile
 create policy "profiles_insert"
@@ -252,11 +259,11 @@ create policy "family_members_select"
   to authenticated
   using (public.is_family_member(family_id));
 
--- Users can join a family (insert themselves)
+-- Users can join a family (insert themselves) as members only
 create policy "family_members_insert"
   on public.family_members for insert
   to authenticated
-  with check (auth.uid() = user_id);
+  with check (auth.uid() = user_id and role = 'member');
 
 -- Admin can update member roles within their family
 create policy "family_members_update"
@@ -488,37 +495,40 @@ values (
 )
 on conflict (id) do nothing;
 
--- Storage policy: authenticated users can upload to their own folder
+-- Storage policy: authenticated users can upload to their family folder
 create policy "storage_photos_insert"
   on storage.objects for insert
   to authenticated
   with check (
     bucket_id = 'photos'
-    and (storage.foldername(name))[1] = auth.uid()::text
+    and public.is_family_member((regexp_split_to_array(name, '/'))[1]::uuid)
   );
 
--- Storage policy: anyone can view photos (bucket is public)
+-- Storage policy: family members can view photos
 create policy "storage_photos_select"
   on storage.objects for select
-  to public
-  using (bucket_id = 'photos');
+  to authenticated
+  using (
+    bucket_id = 'photos' AND
+    public.is_family_member((regexp_split_to_array(name, '/'))[1]::uuid)
+  );
 
--- Storage policy: users can update their own uploaded files
+-- Storage policy: users can update files in their family folder
 create policy "storage_photos_update"
   on storage.objects for update
   to authenticated
   using (
     bucket_id = 'photos'
-    and (storage.foldername(name))[1] = auth.uid()::text
+    and public.is_family_member((regexp_split_to_array(name, '/'))[1]::uuid)
   );
 
--- Storage policy: users can delete their own uploaded files
+-- Storage policy: users can delete files in their family folder
 create policy "storage_photos_delete"
   on storage.objects for delete
   to authenticated
   using (
     bucket_id = 'photos'
-    and (storage.foldername(name))[1] = auth.uid()::text
+    and public.is_family_member((regexp_split_to_array(name, '/'))[1]::uuid)
   );
 
 
